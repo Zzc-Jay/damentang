@@ -1,0 +1,671 @@
+/* ===== 全局重置与基础 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep:    #0a0a14;
+  --bg-scene:   #0d0d1f;
+  --text-main:  #c8c0b0;
+  --text-dim:   #7a7068;
+  --accent:     #8b2500;
+  --gold:       #c4a35a;
+  --gold-glow:  #e8d48b;
+  --red-glow:   #ff4433;
+  --ui-bg:      rgba(10, 10, 20, 0.92);
+  --ui-border:  #2a2520;
+  --bg-dark:    #111122;
+  --border:     #333355;
+  --text:       #c8c0b0;
+}
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: #000;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', 'STSong', 'Songti SC', serif;
+  color: var(--text-main);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===== 全局覆盖层（开场 / 结局） ===== */
+#overlay-screen {
+  position: fixed; inset: 0; z-index: 100;
+  background: radial-gradient(ellipse at 50% 40%, #0f0f24 0%, #060610 60%, #000 100%);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.8s ease, background 1.5s ease;
+}
+#overlay-screen.fade-out {
+  opacity: 0; pointer-events: none;
+}
+#overlay-screen.ending-dark {
+  background: radial-gradient(ellipse at 50% 50%, #1a0808 0%, #0a0202 60%, #000 100%);
+}
+#overlay-screen.ending-light {
+  background: radial-gradient(ellipse at 50% 45%, #1a1a28 0%, #0a0a14 60%, #000 100%);
+}
+#overlay-content {
+  text-align: center; max-width: 520px; padding: 40px;
+}
+#overlay-title {
+  font-size: 2.4rem; letter-spacing: 0.5em;
+  color: var(--gold);
+  margin-bottom: 40px;
+  text-shadow: 0 0 30px rgba(196, 163, 90, 0.3);
+  opacity: 0;
+  font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'KaiTi', 'STKaiti', '楷体', '华文楷体', 'Noto Serif SC', serif;
+  animation: titleFadeIn 1.5s ease forwards;
+}
+#overlay-title.hidden {
+  display: none;
+  animation: none;
+}
+#overlay-title.ending-title {
+  color: #c44;
+  text-shadow: 0 0 40px rgba(200, 60, 60, 0.4);
+  font-size: 2rem;
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+#overlay-title.ending-title.alt {
+  color: #8af;
+  text-shadow: 0 0 30px rgba(100, 150, 220, 0.35);
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+@keyframes titleFadeIn { to { opacity: 1; } }
+
+#overlay-text {
+  font-size: 1.05rem; line-height: 2.2;
+  color: var(--text-main);
+  min-height: 100px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  white-space: pre-line;
+}
+#overlay-text.visible { opacity: 1; }
+
+#overlay-btn, #overlay-btn2 {
+  position: fixed; bottom: 60px;
+  background: none; border: 1px solid var(--ui-border);
+  color: var(--text-dim);
+  padding: 8px 22px;
+  font-family: inherit; font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.3s, color 0.3s, border-color 0.3s;
+  display: inline-block;
+}
+#overlay-btn {
+  left: 50%; transform: translateX(-50%);
+}
+#overlay-btn2 {
+  left: 50%; transform: translateX(-50%);
+  bottom: 20px;
+}
+#overlay-btn:hover, #overlay-btn2:hover {
+  color: var(--gold); border-color: var(--gold);
+}
+#overlay-btn2.hidden { display: none; }
+
+/* ===== 游戏容器 ===== */
+#game-container {
+  width: 100%; max-width: 1000px; height: 100vh;
+  margin: 0 auto;
+  display: flex; flex-direction: column;
+  background: var(--bg-deep);
+  position: relative;
+}
+#game-container.hidden { display: none; }
+
+/* ===== 场景区域 ===== */
+#scene-wrapper {
+  flex: 1; position: relative; overflow: hidden;
+  background: var(--bg-scene);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+#scene-background {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, #141428 0%, #0a0a18 60%, #050510 100%);
+  transition: background 1.5s ease;
+}
+
+/* 水面效果 */
+#scene-background::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 35%;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(10, 20, 30, 0.4) 30%,
+    rgba(5, 15, 25, 0.8) 60%,
+    #020810 100%);
+  animation: waterShimmer 4s ease-in-out infinite;
+}
+@keyframes waterShimmer {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* 浮动粒子 */
+#scene-background::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(1px 1px at 20% 30%, rgba(200,180,150,0.3), transparent),
+    radial-gradient(1px 1px at 60% 45%, rgba(200,180,150,0.2), transparent),
+    radial-gradient(1px 1px at 40% 70%, rgba(200,180,150,0.25), transparent),
+    radial-gradient(1px 1px at 75% 25%, rgba(200,180,150,0.2), transparent),
+    radial-gradient(1px 1px at 85% 55%, rgba(200,180,150,0.15), transparent);
+  animation: dustFloat 8s ease-in-out infinite;
+}
+@keyframes dustFloat {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* 封印之间 —— 暗红色心跳脉冲 */
+.scene-seal_chamber #scene-background {
+  animation: heartPulse 3s ease-in-out infinite;
+}
+@keyframes heartPulse {
+  0%, 100% { background: radial-gradient(ellipse at 50% 55%, #1a1015 0%, #0a0508 60%, #030102 100%); }
+  50% { background: radial-gradient(ellipse at 50% 55%, #1f1015 0%, #0f0508 60%, #050102 100%); }
+}
+
+/* 暗道 — 极暗 */
+.scene-dark_passage #scene-background::after {
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(0,0,0,0.5) 50%,
+    rgba(0,0,0,0.9) 80%,
+    #000 100%);
+}
+
+/* 场景元素容器 */
+#scene-elements {
+  position: absolute; inset: 0; z-index: 2;
+}
+
+.scene-element {
+  position: absolute;
+  font-size: 2.8rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease, opacity 0.4s ease;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  transform: translate(-50%, -50%);
+  line-height: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.scene-element:hover,
+.scene-element:active {
+  transform: translate(-50%, -50%) scale(1.15);
+  filter: drop-shadow(0 0 10px var(--gold-glow)) drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  z-index: 10;
+}
+.scene-element.collectible {
+  animation: itemPulse 2.5s ease-in-out infinite;
+}
+
+/* 场景元素内的图片 */
+.scene-img {
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: contain;
+  display: block;
+}
+.scene-element.npc .scene-img { width: 3rem; height: 3rem; }
+.scene-element.seal-core .scene-img { width: 5rem; height: 5rem; }
+@keyframes itemPulse {
+  0%, 100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  50% { filter: drop-shadow(0 0 8px rgba(200, 160, 80, 0.5)); }
+}
+
+/* 封印核心 — 红色脉冲 */
+.scene-element.seal-core {
+  animation: sealPulse 2s ease-in-out infinite;
+  font-size: 4rem;
+}
+
+/* NPC 残影 */
+.scene-element.npc {
+  font-size: 2.4rem;
+  filter: drop-shadow(0 0 8px rgba(180, 200, 220, 0.4));
+  animation: npcFlicker 3s ease-in-out infinite;
+  opacity: 0.75;
+  transition: opacity 1.5s ease, filter 1.5s ease;
+}
+.scene-element.npc:hover {
+  opacity: 1;
+  filter: drop-shadow(0 0 16px rgba(220, 230, 255, 0.6));
+  transform: translate(-50%, -50%) scale(1.08);
+}
+@keyframes npcFlicker {
+  0%, 100% { opacity: 0.75; }
+  33% { opacity: 0.55; }
+  66% { opacity: 0.9; }
+}
+@keyframes sealPulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(200, 40, 40, 0.5)); }
+  50% { filter: drop-shadow(0 0 24px rgba(255, 60, 60, 0.8)); }
+}
+
+/* 新揭示的元素动画 */
+.scene-element.revealed {
+  animation: revealAppear 0.8s ease-out;
+}
+@keyframes revealAppear {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); filter: blur(8px) drop-shadow(0 0 20px var(--gold-glow)); }
+  60%  { filter: blur(0) drop-shadow(0 0 15px var(--gold-glow)); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+}
+
+/* 场景标题 */
+#scene-title {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 5;
+  font-size: 1.4rem; letter-spacing: 0.3em;
+  color: var(--text-dim);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'KaiTi', 'STKaiti', '楷体', '华文楷体', 'Noto Serif SC', serif;
+  pointer-events: none;
+}
+
+/* 导航箭头 */
+.nav-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  z-index: 10;
+  background: none; border: none;
+  color: var(--text-dim);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 12px 8px;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.nav-arrow:hover {
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(196, 163, 90, 0.4);
+}
+.nav-arrow.locked { color: #4a2020; }
+.nav-arrow.locked:hover { color: var(--accent); text-shadow: 0 0 10px rgba(139, 37, 0, 0.4); }
+#nav-left  { left: 6px; }
+#nav-right { right: 6px; }
+#nav-down  { top: auto; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 1.8rem; }
+#nav-down.hidden { display: none; }
+
+/* 顶部按钮 */
+.top-btn {
+  position: absolute; top: 14px; z-index: 10;
+  background: none; border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.top-btn:hover { opacity: 1; }
+#btn-hint  { right: 172px; }
+#btn-save  { right: 128px; }
+#btn-notes { right: 86px; }
+#btn-menu  { right: 14px; }
+
+/* 存档成功提示 */
+.save-toast {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  background: var(--ui-bg); border: 1px solid var(--gold);
+  border-radius: 4px; padding: 6px 16px;
+  color: var(--gold); font-size: 0.85rem;
+  pointer-events: none;
+  animation: toastFade 1.8s ease-out forwards;
+}
+@keyframes toastFade {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  20% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ===== 持有道具指示条 ===== */
+#holding-indicator {
+  position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+  z-index: 15;
+  background: var(--ui-bg); border: 1px solid var(--gold);
+  border-radius: 4px; padding: 6px 18px;
+  font-size: 0.9rem; color: var(--gold);
+  pointer-events: none;
+  animation: holdPulse 1.2s ease-in-out infinite;
+}
+#holding-indicator.hidden { display: none; }
+@keyframes holdPulse {
+  0%, 100% { border-color: var(--gold); }
+  50% { border-color: var(--gold-glow); box-shadow: 0 0 12px rgba(196, 163, 90, 0.2); }
+}
+
+/* ===== 对话框 ===== */
+#dialog-box {
+  position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  width: 85%; max-width: 600px;
+  background: var(--ui-bg); border: 1px solid var(--ui-border);
+  border-radius: 4px; padding: 20px 24px;
+  text-align: center;
+}
+#dialog-box.hidden { display: none; }
+#dialog-text {
+  font-size: 1.05rem; line-height: 1.8;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  white-space: pre-line;
+}
+#dialog-buttons {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+}
+#dialog-close {
+  background: none; border: 1px solid var(--ui-border);
+  color: var(--text-dim); padding: 6px 24px;
+  cursor: pointer; font-family: inherit; font-size: 0.9rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+#dialog-close:hover { color: var(--gold); border-color: var(--gold); }
+#dialog-close.hidden { display: none; }
+
+/* 选择按钮 */
+.choice-btn {
+  padding: 10px 22px;
+  font-family: inherit; font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.25s;
+  border-radius: 4px;
+}
+.choice-btn.hidden { display: none; }
+#dialog-choice-a {
+  background: rgba(20, 5, 5, 0.8); border: 1px solid #5a3030;
+  color: #d4a0a0;
+}
+#dialog-choice-a:hover {
+  background: rgba(40, 8, 8, 0.9); border-color: #a04040;
+  color: #f0c0c0; box-shadow: 0 0 16px rgba(180, 40, 40, 0.3);
+}
+#dialog-choice-b {
+  background: rgba(5, 10, 25, 0.8); border: 1px solid #30405a;
+  color: #a0b8d4;
+}
+#dialog-choice-b:hover {
+  background: rgba(8, 15, 35, 0.9); border-color: #4060a0;
+  color: #c0d8f0; box-shadow: 0 0 16px rgba(60, 100, 180, 0.3);
+}
+
+/* ===== 道具详情弹窗 ===== */
+#item-detail {
+  position: absolute; inset: 0; z-index: 25;
+  background: rgba(5, 5, 15, 0.85);
+  display: flex; align-items: center; justify-content: center;
+}
+#item-detail.hidden { display: none; }
+#item-detail-content {
+  background: var(--ui-bg); border: 1px solid var(--ui-border);
+  border-radius: 6px; padding: 32px 40px;
+  text-align: center; max-width: 340px; width: 80%;
+}
+#item-detail-emoji { font-size: 4rem; display: block; margin-bottom: 12px; }
+#item-detail-emoji .detail-img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+#item-detail-name  { font-size: 1.2rem; color: var(--gold); margin-bottom: 10px; letter-spacing: 0.15em; }
+#item-detail-desc  { font-size: 0.9rem; color: var(--text-dim); line-height: 1.7; margin-bottom: 20px; }
+#item-detail-close {
+  background: none; border: 1px solid var(--ui-border);
+  color: var(--text-dim); padding: 5px 20px;
+  cursor: pointer; font-family: inherit; font-size: 0.85rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+#item-detail-close:hover { color: var(--gold); border-color: var(--gold); }
+
+/* ===== 背包栏 ===== */
+#inventory-bar {
+  height: 90px;
+  background: var(--ui-bg); border-top: 1px solid var(--ui-border);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 15;
+}
+.inv-page-btn {
+  background: none; border: 1px solid var(--ui-border);
+  color: var(--text-dim); font-size: 1.2rem;
+  cursor: pointer; padding: 4px 8px;
+  border-radius: 3px; margin: 0 4px;
+  transition: color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.inv-page-btn:hover {
+  color: var(--gold); border-color: var(--gold);
+}
+.inv-page-btn.hidden { visibility: hidden; }
+#inv-page-indicator {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin: 0 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#inv-page-indicator.hidden { display: none; }
+#inventory-slots { display: flex; gap: 6px; }
+.inventory-slot {
+  width: 60px; height: 60px;
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+  background: rgba(20, 20, 35, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.inventory-slot:hover,
+.inventory-slot:active {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(196, 163, 90, 0.2);
+}
+.inventory-slot.empty { cursor: default; }
+.inventory-slot.empty:hover,
+.inventory-slot.empty:active { border-color: var(--ui-border); box-shadow: none; }
+.inventory-slot .inv-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+.inventory-slot.selected {
+  border-color: var(--gold-glow) !important;
+  box-shadow: 0 0 16px rgba(232, 212, 139, 0.35) !important;
+  transform: scale(1.08);
+  animation: selectedGlow 0.8s ease-in-out infinite;
+}
+@keyframes selectedGlow {
+  0%, 100% { box-shadow: 0 0 16px rgba(232, 212, 139, 0.35); }
+  50% { box-shadow: 0 0 24px rgba(232, 212, 139, 0.55); }
+}
+
+/* ===== 笔记面板 ===== */
+#notes-panel {
+  position: absolute; inset: 0; z-index: 30;
+  background: rgba(5, 5, 15, 0.9);
+  display: flex; align-items: center; justify-content: center;
+}
+#notes-content {
+  background: var(--ui-bg); border: 1px solid var(--ui-border);
+  border-radius: 6px; padding: 28px 32px;
+  max-width: 500px; width: 85%; max-height: 70vh; overflow-y: auto;
+}
+#notes-content h3 {
+  text-align: center; color: var(--gold); letter-spacing: 0.2em;
+  margin-bottom: 20px; font-size: 1.1rem;
+}
+.note-entry {
+  border-bottom: 1px solid var(--ui-border);
+  padding: 12px 0; cursor: pointer;
+  transition: color 0.2s;
+}
+.note-entry:hover { color: var(--gold); }
+.note-entry .note-emoji { font-size: 1.5rem; margin-right: 8px; vertical-align: middle; display: inline-block; }
+.note-entry .note-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.note-entry .note-title { font-size: 1rem; }
+#notes-close {
+  display: block; margin: 20px auto 0;
+  background: none; border: 1px solid var(--ui-border);
+  color: var(--text-dim); padding: 5px 20px;
+  cursor: pointer; font-family: inherit; font-size: 0.85rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+#notes-close:hover { color: var(--gold); border-color: var(--gold); }
+
+/* ===== 转场效果 ===== */
+.scene-transition {
+  animation: inkBleed 0.6s ease-out;
+}
+@keyframes inkBleed {
+  0%   { filter: blur(12px) brightness(0.3); opacity: 0; transform: scale(1.04); }
+  40%  { filter: blur(6px) brightness(0.6); opacity: 0.5; }
+  100% { filter: blur(0) brightness(1); opacity: 1; transform: scale(1); }
+}
+
+/* 墨水晕染覆盖层 */
+#ink-overlay {
+  position: absolute; inset: 0; z-index: 30;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(5,5,20,0.6) 70%, rgba(0,0,0,0.9) 100%);
+  animation: inkOverlay 0.55s ease-out forwards;
+}
+@keyframes inkOverlay {
+  0%   { opacity: 1; transform: scale(0.2); }
+  50%  { opacity: 0.8; transform: scale(1.3); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* ===== 响应式 ===== */
+/* ===== 滑动拼图 ===== */
+#puzzle-overlay {
+  position: absolute; inset: 0; z-index: 35;
+  background: rgba(5, 5, 15, 0.92);
+  display: flex; align-items: center; justify-content: center;
+  animation: puzzleFadeIn 0.3s ease-out;
+}
+@keyframes puzzleFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.puzzle-box {
+  background: var(--ui-bg); border: 1px solid var(--ui-border);
+  border-radius: 8px; padding: 24px 28px 20px;
+  text-align: center; max-width: 380px; width: 88%;
+  position: relative;
+}
+.puzzle-title {
+  color: var(--gold); font-size: 1rem; letter-spacing: 0.2em;
+  margin-bottom: 14px;
+}
+.puzzle-grid {
+  display: grid; gap: 5px;
+  margin: 0 auto 14px;
+  max-width: 252px; width: 100%;
+}
+.puzzle-tile {
+  aspect-ratio: 1;
+  background: rgba(28, 28, 48, 0.85);
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.2s, box-shadow 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.puzzle-tile:hover,
+.puzzle-tile:active {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(196, 163, 90, 0.3);
+  transform: scale(1.05);
+  z-index: 2;
+}
+.puzzle-tile.correct {
+  border-color: var(--gold-glow);
+  box-shadow: 0 0 10px rgba(232, 212, 139, 0.35);
+}
+.puzzle-tile.empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+  box-shadow: none;
+}
+.puzzle-tile.empty:hover {
+  transform: none;
+  box-shadow: none;
+}
+.puzzle-info {
+  color: var(--text-dim); font-size: 0.8rem;
+  margin-bottom: 10px;
+}
+.puzzle-reset-btn {
+  background: none; border: 1px solid var(--ui-border);
+  color: var(--text-dim); padding: 5px 18px;
+  cursor: pointer; font-family: inherit; font-size: 0.8rem;
+  border-radius: 3px;
+  transition: color 0.2s, border-color 0.2s;
+  margin-right: 8px;
+}
+.puzzle-reset-btn:hover { color: var(--gold); border-color: var(--gold); }
+.puzzle-close-btn {
+  position: absolute; top: 6px; right: 10px;
+  background: none; border: none;
+  color: var(--text-dim); font-size: 1rem;
+  cursor: pointer; padding: 2px 6px;
+  transition: color 0.2s;
+}
+.puzzle-close-btn:hover { color: var(--accent); }
+.puzzle-win-flash {
+  animation: winFlash 0.5s ease-out;
+}
+@keyframes winFlash {
+  0%   { box-shadow: 0 0 0 rgba(232, 212, 139, 0); }
+  50%  { box-shadow: 0 0 30px rgba(232, 212, 139, 0.7); }
+  100% { box-shadow: 0 0 0 rgba(232, 212, 139, 0); }
+}
+
+/* shake animation for wrong inputs */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@media (max-width: 600px) {
+  .scene-element { font-size: 2rem; }
+  #scene-title { font-size: 1rem; }
+  .inventory-slot { width: 46px; height: 46px; font-size: 1.5rem; }
+  #inventory-bar { height: 70px; }
+  #overlay-title { font-size: 1.6rem; }
+  #overlay-text { font-size: 0.9rem; }
+  #holding-indicator { font-size: 0.75rem; top: 44px; padding: 4px 12px; }
+  .top-btn { font-size: 1rem; }
+  #btn-hint { right: 132px; }
+  #btn-save { right: 98px; }
+  #btn-notes { right: 66px; }
+  .scene-img { width: 2.5rem; height: 2.5rem; }
+  .inventory-slot .inv-img { width: 34px; height: 34px; }
+  #item-detail-emoji .detail-img { width: 72px; height: 72px; }
+}

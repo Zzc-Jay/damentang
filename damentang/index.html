@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>大门塘</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 开场 / 结局画面 -->
+  <div id="overlay-screen">
+    <div id="overlay-content">
+      <h1 id="overlay-title">大 门 塘</h1>
+      <p id="overlay-text"></p>
+      <button id="overlay-btn">点击继续</button>
+      <button id="overlay-btn2" class="hidden">—</button>
+    </div>
+  </div>
+
+  <!-- 游戏主体 -->
+  <div id="game-container" class="hidden">
+    <!-- 场景区域 -->
+    <div id="scene-wrapper">
+      <div id="scene-background"></div>
+      <div id="scene-elements"></div>
+      <div id="scene-title"></div>
+      <div id="holding-indicator" class="hidden"></div>
+      <button id="nav-left" class="nav-arrow" title="向左">◂</button>
+      <button id="nav-right" class="nav-arrow" title="向右">▸</button>
+      <button id="nav-down" class="nav-arrow nav-down" title="返回">▾</button>
+      <button id="btn-hint" class="top-btn" title="提示">💡</button>
+      <button id="btn-save" class="top-btn" title="存档" style="right:128px;">💾</button>
+      <button id="btn-notes" class="top-btn" title="笔记" style="right:86px;">📓</button>
+      <button id="btn-menu" class="top-btn" title="菜单">⚙️</button>
+    </div>
+    <!-- 对话框 -->
+    <div id="dialog-box" class="hidden">
+      <p id="dialog-text"></p>
+      <div id="dialog-buttons">
+        <button id="dialog-close">继续</button>
+        <button id="dialog-choice-a" class="hidden choice-btn">—</button>
+        <button id="dialog-choice-b" class="hidden choice-btn">—</button>
+      </div>
+    </div>
+    <!-- 道具详情弹窗 -->
+    <div id="item-detail" class="hidden">
+      <div id="item-detail-content">
+        <span id="item-detail-emoji"></span>
+        <h3 id="item-detail-name"></h3>
+        <p id="item-detail-desc"></p>
+        <button id="item-detail-close">关闭</button>
+      </div>
+    </div>
+    <!-- 背包栏 -->
+    <div id="inventory-bar">
+      <button id="inv-prev" class="inv-page-btn hidden" title="上一页">◂</button>
+      <div id="inventory-slots"></div>
+      <button id="inv-next" class="inv-page-btn hidden" title="下一页">▸</button>
+      <span id="inv-page-indicator" class="hidden"></span>
+    </div>
+  </div>
+
+  <script src="js/game.js?v=0.9.0"></script>
+</body>
+</html>

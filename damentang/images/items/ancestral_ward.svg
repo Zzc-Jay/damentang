@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="14" y="8" width="36" height="48" rx="3" fill="#1a1008" stroke="#c4a35a" stroke-width="1.5"/>
+  <path d="M20 20 Q32 14 44 20" fill="none" stroke="#8b4513" stroke-width="1.5"/>
+  <path d="M20 32 Q32 36 44 32" fill="none" stroke="#4a6ae0" stroke-width="1.5"/>
+  <path d="M26 42 L32 36 L38 42 L32 48 Z" fill="none" stroke="#6a8a40" stroke-width="1.2"/>
+  <circle cx="32" cy="28" r="6" fill="none" stroke="#c4a35a" stroke-width="0.8"/>
+  <text x="32" y="30" text-anchor="middle" fill="#c4a35a" font-size="6">护</text>
+  <line x1="14" y1="8" x2="50" y2="56" stroke="#8a7a5a" stroke-width="0.3"/>
+  <line x1="50" y1="8" x2="14" y2="56" stroke="#8a7a5a" stroke-width="0.3"/>
+</svg>
