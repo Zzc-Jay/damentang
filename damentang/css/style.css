@@ -275,7 +275,7 @@ html, body {
 /* 导航箭头 */
 .nav-arrow {
   position: absolute; top: 50%; transform: translateY(-50%);
-  z-index: 10;
+  z-index: 26;
   background: none; border: none;
   color: var(--text-dim);
   font-size: 2rem;
@@ -429,7 +429,7 @@ html, body {
 
 /* ===== 背包栏 ===== */
 #inventory-bar {
-  height: 90px;
+  height: calc(90px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--ui-bg); border-top: 1px solid var(--ui-border);
   display: flex; align-items: center; justify-content: center;
@@ -661,7 +661,7 @@ html, body {
   .scene-element { font-size: 2rem; }
   #scene-title { font-size: 1rem; }
   .inventory-slot { width: 46px; height: 46px; font-size: 1.5rem; }
-  #inventory-bar { height: 70px; }
+  #inventory-bar { height: calc(70px + env(safe-area-inset-bottom)); }
   #overlay-title { font-size: 1.6rem; }
   #overlay-text { font-size: 0.9rem; }
   #holding-indicator { font-size: 0.75rem; top: 44px; padding: 4px 12px; }
@@ -677,9 +677,9 @@ html, body {
 /* 横屏适配 */
 @media (orientation: landscape) and (max-height: 500px) {
   #game-container { height: 100dvh; }
-  #inventory-bar { height: 56px; }
+  #inventory-bar { height: calc(56px + env(safe-area-inset-bottom)); }
   #inventory-bar .inventory-slot { width: 40px; height: 40px; font-size: 1.3rem; }
-  #inventory-bar .inv-img { width: 28px; height: 28px; }
+  .inventory-slot .inv-img { width: 28px; height: 28px; }
   #scene-title { top: 8px; font-size: 0.9rem; }
   .top-btn { top: calc(6px + env(safe-area-inset-top)); font-size: 1.1rem; padding: 4px 8px; }
   .nav-arrow { font-size: 1.5rem; padding: 8px 10px; }
