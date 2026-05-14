@@ -1,0 +1,18 @@
+{
+  "name": "大门塘",
+  "short_name": "大门塘",
+  "description": "暗黑点触式解谜游戏 — 探索被遗忘的南方水乡",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#0a0a14",
+  "icons": [
+    {
+      "src": "images/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png"
+    }
+  ],
+  "lang": "zh-CN"
+}

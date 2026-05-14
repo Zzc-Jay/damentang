@@ -1,0 +1,786 @@
+// ===================== 密码锁拼图引擎 =====================
+class CombinationPuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.digits = config.digits || 3;
+    this.answer = config.answer || [1, 1, 1];
+    this.onSolve = onSolve;
+    this.current = new Array(this.digits).fill(0);
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:12px;justify-content:center;align-items:center;margin:16px 0;';
+
+    for (let d = 0; d < this.digits; d++) {
+      const wheel = document.createElement('div');
+      wheel.style.cssText = 'text-align:center;';
+
+      const upBtn = document.createElement('button');
+      upBtn.textContent = '▲';
+      upBtn.className = 'puzzle-reset-btn';
+      upBtn.style.cssText = 'display:block;margin:0 auto 4px;padding:2px 10px;';
+      const self = this;
+      upBtn.addEventListener('click', function () {
+        self.current[d] = (self.current[d] + 1) % 10;
+        self.render();
+      });
+
+      const digit = document.createElement('div');
+      digit.style.cssText = 'font-size:2rem;color:var(--gold);font-family:monospace;min-width:36px;text-align:center;';
+      digit.textContent = this.current[d];
+
+      const downBtn = document.createElement('button');
+      downBtn.textContent = '▼';
+      downBtn.className = 'puzzle-reset-btn';
+      downBtn.style.cssText = 'display:block;margin:4px auto 0;padding:2px 10px;';
+      downBtn.addEventListener('click', function () {
+        self.current[d] = (self.current[d] + 9) % 10; // -1 mod 10
+        self.render();
+      });
+
+      wheel.appendChild(upBtn);
+      wheel.appendChild(digit);
+      wheel.appendChild(downBtn);
+      row.appendChild(wheel);
+    }
+    this.container.appendChild(row);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;margin-top:8px;';
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重置';
+    resetBtn.addEventListener('click', () => {
+      this.current = new Array(this.digits).fill(0);
+      this.render();
+    });
+    btnRow.appendChild(resetBtn);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'puzzle-reset-btn';
+    submitBtn.textContent = '确认';
+    submitBtn.style.cssText = 'border-color:var(--gold);color:var(--gold);';
+    const self = this;
+    submitBtn.addEventListener('click', function () {
+      if (self._check()) {
+        self.onSolve();
+      } else {
+        // 错误反馈：红色闪烁 + 震动
+        submitBtn.style.borderColor = '#c44';
+        submitBtn.style.color = '#c44';
+        submitBtn.style.animation = 'shake 0.4s ease';
+        setTimeout(() => {
+          submitBtn.style.borderColor = 'var(--gold)';
+          submitBtn.style.color = 'var(--gold)';
+          submitBtn.style.animation = '';
+        }, 400);
+      }
+    });
+    btnRow.appendChild(submitBtn);
+
+    this.container.appendChild(btnRow);
+  }
+
+  _check() {
+    for (let i = 0; i < this.digits; i++) {
+      if (this.current[i] !== this.answer[i]) return false;
+    }
+    return true;
+  }
+}
+
+// ===================== 顺序谜题引擎 =====================
+class SequencePuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.items = config.items || [];
+    this.answer = config.answer || [];
+    this.onSolve = onSolve;
+    this.selected = [];
+    // 只在构造时打乱一次，避免错误后重新排列
+    this._shuffled = this.items.map((item, i) => ({ ...item, origIdx: i }));
+    for (let i = this._shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this._shuffled[i], this._shuffled[j]] = [this._shuffled[j], this._shuffled[i]];
+    }
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const self = this;
+
+    const clue = document.createElement('p');
+    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:12px;font-size:0.85rem;';
+    clue.textContent = '按正确顺序依次点击';
+    this.container.appendChild(clue);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;';
+
+    this._shuffled.forEach(item => {
+      const btn = document.createElement('button');
+      btn.style.cssText = 'padding:10px 16px;background:var(--bg-dark);border:2px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-size:1rem;min-width:60px;transition:all 0.2s;';
+      btn.textContent = item.emoji + ' ' + item.label;
+      btn.addEventListener('click', () => {
+        if (self.selected.includes(item.origIdx)) return;
+        self.selected.push(item.origIdx);
+        btn.style.borderColor = 'var(--gold)';
+        btn.style.color = 'var(--gold)';
+        if (self.audio) self.audio.sfxClick();
+
+        // 检查是否正确
+        const pos = self.selected.length - 1;
+        if (self.selected[pos] !== self.answer[pos]) {
+          // 错误 → 闪烁红色
+          btn.style.borderColor = '#c44';
+          btn.style.color = '#c44';
+          setTimeout(() => {
+            self.selected = [];
+            self.render();
+          }, 600);
+        } else if (self.selected.length === self.answer.length) {
+          // 全部正确
+          setTimeout(() => self.onSolve(), 350);
+        }
+      });
+      grid.appendChild(btn);
+    });
+    this.container.appendChild(grid);
+
+    // 当前顺序指示
+    const indicator = document.createElement('p');
+    indicator.style.cssText = 'color:var(--gold);text-align:center;margin-top:10px;min-height:1.5em;font-size:0.85rem;';
+    if (this.selected.length > 0) {
+      indicator.textContent = '已选：' + this.selected.map(i => this.items[i].label).join(' → ');
+    }
+    this.container.appendChild(indicator);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重置';
+    resetBtn.addEventListener('click', () => {
+      this.selected = [];
+      this.render();
+    });
+    this.container.appendChild(resetBtn);
+  }
+}
+
+// ===================== 光线反射谜题引擎 =====================
+class LightPuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.size = config.size || 4;
+    this.mirrors = config.mirrors || [];
+    this.source = config.source || { row: 0, col: 0, dir: 'E' };
+    this.target = config.target || { row: 3, col: 3 };
+    this.onSolve = onSolve;
+    // 深拷贝 mirrors 数据
+    this.current = this.mirrors.map(m => ({ ...m }));
+  }
+
+  _rotate(row, col) {
+    const m = this.current.find(m => m.row === row && m.col === col);
+    if (!m) return;
+    const dirs = ['NE', 'NW', 'SW', 'SE'];
+    const idx = dirs.indexOf(m.orientation);
+    m.orientation = dirs[(idx + 1) % 4];
+  }
+
+  _reflect(dir, mirrorOrientation) {
+    // 镜子方向 '/' = NE/SW, '\' = NW/SE
+    const type = (mirrorOrientation === 'NE' || mirrorOrientation === 'SW') ? '/' : '\\';
+    if (type === '/') {
+      const map = { N: 'E', E: 'N', S: 'W', W: 'S' };
+      return map[dir];
+    } else {
+      const map = { N: 'W', W: 'N', S: 'E', E: 'S' };
+      return map[dir];
+    }
+  }
+
+  _simulate() {
+    // 从光源出发追踪光线路径
+    const path = [];
+    const visited = new Set();
+    let { row, col } = this.source;
+    let dir = this.source.dir || 'E';
+    const dirs = { N: [-1, 0], S: [1, 0], E: [0, 1], W: [0, -1] };
+
+    for (let step = 0; step < 40; step++) {
+      const key = `${row},${col},${dir}`;
+      if (visited.has(key)) break;
+      visited.add(key);
+      path.push({ row, col });
+
+      // 检查是否到达目标
+      if (row === this.target.row && col === this.target.col) return path;
+
+      // 检查当前位置是否有镜子
+      const mirror = this.current.find(m => m.row === row && m.col === col);
+      if (mirror && (row !== this.source.row || col !== this.source.col || step > 0)) {
+        dir = this._reflect(dir, mirror.orientation);
+      }
+
+      // 移动到下一个格子
+      const [dr, dc] = dirs[dir];
+      row += dr;
+      col += dc;
+
+      // 越界
+      if (row < 0 || row >= this.size || col < 0 || col >= this.size) break;
+    }
+    return null;
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const self = this;
+
+    const clue = document.createElement('p');
+    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:8px;font-size:0.85rem;';
+    clue.textContent = '点击镜子旋转方向，让光线到达目标';
+    this.container.appendChild(clue);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = `display:grid;grid-template-columns:repeat(${this.size}, 54px);gap:3px;justify-content:center;margin:10px 0;`;
+
+    const path = this._simulate();
+    const pathSet = new Set(path ? path.map(p => `${p.row},${p.col}`) : []);
+
+    for (let r = 0; r < this.size; r++) {
+      for (let c = 0; c < this.size; c++) {
+        const cell = document.createElement('div');
+        cell.style.cssText = 'width:54px;height:54px;background:#111;border:1px solid #333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:default;position:relative;transition:box-shadow 0.3s;';
+
+        // 光源
+        if (r === this.source.row && c === this.source.col) {
+          cell.textContent = '💡';
+          cell.style.background = '#221100';
+        }
+        // 目标
+        else if (r === this.target.row && c === this.target.col) {
+          cell.textContent = '🎯';
+          cell.style.background = '#001100';
+        }
+        // 镜子 — 用斜线段表示，方向仅取决于 \ 或 / 类型
+        const mirror = this.current.find(m => m.row === r && m.col === c);
+        if (mirror) {
+          const mirrorType = (mirror.orientation === 'NE' || mirror.orientation === 'SW') ? '/' : '\\';
+          cell.textContent = '';
+          const line = document.createElement('span');
+          const deg = mirrorType === '/' ? -45 : 45;
+          line.style.cssText = 'display:block;width:70%;height:2px;background:#c4a35a;transform:rotate(' + deg + 'deg);border-radius:1px;pointer-events:none;';
+          cell.appendChild(line);
+          cell.style.cursor = 'pointer';
+          cell.title = '铜镜 (点击旋转 90°)';
+          cell.style.transform = '';
+          cell.addEventListener('click', () => {
+            self._rotate(r, c);
+            self.render();
+          });
+        }
+
+        // 高亮光线路径
+        if (pathSet.has(`${r},${c}`)) {
+          cell.style.boxShadow = 'inset 0 0 10px rgba(200,180,100,0.5)';
+          cell.style.borderColor = '#866';
+        }
+
+        grid.appendChild(cell);
+      }
+    }
+    this.container.appendChild(grid);
+
+    // 状态指示
+    const status = document.createElement('p');
+    status.style.cssText = 'color:var(--gold);text-align:center;font-size:0.85rem;min-height:1.2em;';
+    status.textContent = path && path.some(p => p.row === this.target.row && p.col === this.target.col)
+      ? '✓ 光线到达了目标！'
+      : (path ? '光线尚未到达目标……' : '光线迷失在黑暗中……');
+    this.container.appendChild(status);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;';
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重置';
+    resetBtn.addEventListener('click', () => {
+      this.current = this.mirrors.map(m => ({ ...m }));
+      this.render();
+    });
+    btnRow.appendChild(resetBtn);
+
+    if (path && path.some(p => p.row === this.target.row && p.col === this.target.col)) {
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'puzzle-reset-btn';
+      confirmBtn.style.cssText = 'border-color:var(--gold);color:var(--gold);';
+      confirmBtn.textContent = '确认';
+      confirmBtn.addEventListener('click', () => self.onSolve());
+      btnRow.appendChild(confirmBtn);
+    }
+
+    this.container.appendChild(btnRow);
+  }
+}
+
+// ===================== 滑动拼图引擎 =====================
+// 当前第一章无场景使用（厨房场景 v0.7 移除），保留供后续章节复用
+class SlidingPuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.size = config.size || 3;
+    this.goal = [...config.goal];
+    this.onSolve = onSolve;
+    this.moves = 0;
+    this.tiles = [];
+    this.emptyIdx = -1;
+    this._flashing = false;
+    this._build([...config.goal]);
+  }
+
+  _build(tiles) {
+    this.tiles = tiles;
+    this.emptyIdx = this.tiles.indexOf(null);
+    if (this.emptyIdx === -1) this.emptyIdx = tiles.length - 1;
+  }
+
+  _getNeighbors() {
+    const r = Math.floor(this.emptyIdx / this.size);
+    const c = this.emptyIdx % this.size;
+    const n = [];
+    if (r > 0) n.push(this.emptyIdx - this.size);
+    if (r < this.size - 1) n.push(this.emptyIdx + this.size);
+    if (c > 0) n.push(this.emptyIdx - 1);
+    if (c < this.size - 1) n.push(this.emptyIdx + 1);
+    return n;
+  }
+
+  _swap(idx) {
+    const t = this.tiles[this.emptyIdx];
+    this.tiles[this.emptyIdx] = this.tiles[idx];
+    this.tiles[idx] = t;
+    this.emptyIdx = idx;
+  }
+
+  // 闪现目标排列
+  flashGoal(duration = 1200) {
+    if (this._flashing) return;
+    this._flashing = true;
+    const saved = [...this.tiles];
+    const savedEmpty = this.emptyIdx;
+    this._build([...this.goal]);
+    this.render();
+    const self = this;
+    setTimeout(() => {
+      self._build(saved);
+      self.emptyIdx = savedEmpty;
+      self.render();
+      self._flashing = false;
+    }, duration);
+  }
+
+  shuffle(moves) {
+    moves = moves || 80 + Math.floor(Math.random() * 40);
+    for (let k = 0; k < moves; k++) {
+      const nb = this._getNeighbors();
+      this._swap(nb[Math.floor(Math.random() * nb.length)]);
+    }
+    this.moves = 0;
+    this.render();
+  }
+
+  move(idx) {
+    if (this._flashing) return false;
+    if (!this._getNeighbors().includes(idx)) return false;
+    this._swap(idx);
+    this.moves++;
+    this.render();
+    if (this._checkWin()) {
+      const self = this;
+      setTimeout(() => self.onSolve(self.moves), 280);
+    }
+    return true;
+  }
+
+  _checkWin() {
+    for (let i = 0; i < this.tiles.length; i++) {
+      if (this.tiles[i] !== this.goal[i]) return false;
+    }
+    return true;
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'puzzle-grid';
+    grid.style.gridTemplateColumns = 'repeat(' + this.size + ', 1fr)';
+
+    this.tiles.forEach((tile, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'puzzle-tile';
+      if (tile === null) {
+        cell.classList.add('empty');
+      } else {
+        cell.textContent = tile;
+        if (!this._flashing && tile === this.goal[i]) cell.classList.add('correct');
+        const self = this;
+        cell.addEventListener('click', function () { self.move(i); });
+      }
+      grid.appendChild(cell);
+    });
+
+    const info = document.createElement('div');
+    info.className = 'puzzle-info';
+    info.textContent = '移动次数: ' + this.moves;
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重置';
+    const self = this;
+    resetBtn.addEventListener('click', function () {
+      self._build([...self.goal]);
+      self.shuffle(60 + Math.floor(Math.random() * 30));
+    });
+
+    this.container.appendChild(grid);
+    this.container.appendChild(info);
+    this.container.appendChild(resetBtn);
+  }
+}
+
+// ===================== 画符阵谜题引擎 =====================
+class PatternPuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.size = config.size || 3;
+    this.pattern = config.pattern || [0, 1, 2];
+    this.onSolve = onSolve;
+    this.selected = [];
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const self = this;
+
+    const clue = document.createElement('p');
+    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:8px;font-size:0.85rem;';
+    clue.textContent = '按正确顺序点击圆点，画出符阵';
+    this.container.appendChild(clue);
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:relative;width:240px;height:240px;margin:0 auto;';
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '240');
+    svg.setAttribute('height', '240');
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+
+    // 画已连接的线
+    for (let i = 1; i < this.selected.length; i++) {
+      const from = this.selected[i - 1];
+      const to = this.selected[i];
+      const fr = Math.floor(from / this.size);
+      const fc = from % this.size;
+      const tr = Math.floor(to / this.size);
+      const tc = to % this.size;
+      const x1 = 30 + fc * 90;
+      const y1 = 30 + fr * 90;
+      const x2 = 30 + tc * 90;
+      const y2 = 30 + tr * 90;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke', '#c4a35a');
+      line.setAttribute('stroke-width', '3');
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('opacity', '0.8');
+      svg.appendChild(line);
+    }
+    wrapper.appendChild(svg);
+
+    // 点阵
+    for (let r = 0; r < this.size; r++) {
+      for (let c = 0; c < this.size; c++) {
+        const idx = r * this.size + c;
+        const dot = document.createElement('div');
+        dot.style.cssText = `position:absolute;width:32px;height:32px;border-radius:50%;background:#1a1a2e;border:2px solid #555;top:${14 + r * 90}px;left:${14 + c * 90}px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;`;
+        dot.textContent = '·';
+        dot.style.color = '#555';
+        dot.style.fontSize = '1.5rem';
+        dot.style.lineHeight = '1';
+
+        if (this.selected.includes(idx)) {
+          dot.style.background = '#2a2010';
+          dot.style.borderColor = 'var(--gold)';
+          dot.style.boxShadow = '0 0 10px rgba(196,163,90,0.5)';
+          dot.style.color = 'var(--gold)';
+          const order = this.selected.indexOf(idx) + 1;
+          dot.textContent = order;
+          dot.style.fontSize = '0.9rem';
+          dot.style.fontWeight = 'bold';
+        }
+
+        dot.addEventListener('click', () => {
+          if (self.selected.includes(idx)) return;
+          self.selected.push(idx);
+          if (self.audio) self.audio.sfxClick();
+          self.render();
+
+          if (self.selected.length === self.pattern.length) {
+            const match = self.selected.every((v, i) => v === self.pattern[i]);
+            if (match) {
+              setTimeout(() => self.onSolve(), 400);
+            } else {
+              setTimeout(() => {
+                self.selected = [];
+                self.render();
+              }, 700);
+            }
+          }
+        });
+        wrapper.appendChild(dot);
+      }
+    }
+    this.container.appendChild(wrapper);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重置';
+    resetBtn.addEventListener('click', () => {
+      this.selected = [];
+      this.render();
+    });
+    this.container.appendChild(resetBtn);
+  }
+}
+
+// ===================== 记忆配对谜题引擎 =====================
+class MemoryPuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.pairs = config.pairs || [];
+    this.cols = config.cols || 4;
+    this.onSolve = onSolve;
+    this.flipped = [];
+    this.matched = new Set();
+    this._locked = false;
+    this.attempts = 0;
+    this._initTiles();
+  }
+
+  _initTiles() {
+    this.tiles = [];
+    this.pairs.forEach((pair, i) => {
+      this.tiles.push({ pairIdx: i, emoji: pair[0], label: pair[1], id: i * 2 });
+      this.tiles.push({ pairIdx: i, emoji: pair[0], label: pair[1], id: i * 2 + 1 });
+    });
+    for (let i = this.tiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.tiles[i], this.tiles[j]] = [this.tiles[j], this.tiles[i]];
+    }
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const self = this;
+
+    const clue = document.createElement('p');
+    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:8px;font-size:0.85rem;';
+    clue.textContent = '翻牌找到相同的配对 · 已配对 ' + this.matched.size + '/' + this.pairs.length;
+    this.container.appendChild(clue);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = `display:grid;grid-template-columns:repeat(${this.cols}, 64px);gap:6px;justify-content:center;`;
+
+    this.tiles.forEach((tile, idx) => {
+      const cell = document.createElement('div');
+      cell.style.cssText = 'width:64px;height:64px;background:#1a1a2e;border:2px solid #333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;cursor:pointer;transition:all 0.3s;user-select:none;';
+      cell.textContent = '?';
+
+      const isMatched = this.matched.has(tile.pairIdx);
+      const isFlipped = this.flipped.find(f => f.idx === idx);
+
+      if (isMatched) {
+        cell.style.background = '#1a281a';
+        cell.style.borderColor = '#4a6a4a';
+        cell.style.cursor = 'default';
+        cell.textContent = tile.emoji;
+      } else if (isFlipped) {
+        cell.textContent = isFlipped.tile.emoji;
+        cell.style.background = '#2a2010';
+        cell.style.borderColor = 'var(--gold)';
+        cell.style.cursor = 'default';
+      }
+
+      cell.addEventListener('click', () => {
+        if (self._locked) return;
+        if (self.matched.has(tile.pairIdx)) return;
+        if (self.flipped.find(f => f.idx === idx)) return;
+        if (self.flipped.length >= 2) return;
+
+        self.flipped.push({ idx, tile });
+        if (self.audio) self.audio.sfxClick();
+        self.render();
+
+        if (self.flipped.length === 2) {
+          self._locked = true;
+          self.attempts++;
+          const [a, b] = self.flipped;
+          if (a.tile.pairIdx === b.tile.pairIdx) {
+            self.matched.add(a.tile.pairIdx);
+            self.flipped = [];
+            self._locked = false;
+            if (self.audio) self.audio.sfxCollect();
+            self.render();
+            if (self.matched.size === self.pairs.length) {
+              setTimeout(() => self.onSolve(), 500);
+            }
+          } else {
+            setTimeout(() => {
+              self.flipped = [];
+              self._locked = false;
+              self.render();
+            }, 700);
+          }
+        }
+      });
+
+      grid.appendChild(cell);
+    });
+    this.container.appendChild(grid);
+
+    const info = document.createElement('p');
+    info.style.cssText = 'color:var(--text-dim);text-align:center;font-size:0.8rem;margin-top:6px;';
+    info.textContent = '尝试次数: ' + this.attempts;
+    this.container.appendChild(info);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重新开始';
+    resetBtn.addEventListener('click', () => {
+      this.matched = new Set();
+      this.flipped = [];
+      this._locked = false;
+      this.attempts = 0;
+      this._initTiles();
+      this.render();
+    });
+    this.container.appendChild(resetBtn);
+  }
+}
+
+// ===================== 符文输入谜题引擎 =====================
+class SymbolInputPuzzle {
+  constructor(container, config, onSolve) {
+    this.container = container;
+    this.symbols = config.symbols || [];
+    this.answer = config.answer || [];
+    this.onSolve = onSolve;
+    this.input = [];
+    this._error = false;
+    // 打乱按钮显示顺序，避免答案就是从左到右
+    this._order = this.symbols.map((_, i) => i);
+    for (let i = this._order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this._order[i], this._order[j]] = [this._order[j], this._order[i]];
+    }
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    const self = this;
+
+    const clue = document.createElement('p');
+    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:10px;font-size:0.85rem;';
+    clue.textContent = '按正确顺序点击符文，输入密码';
+    this.container.appendChild(clue);
+
+    // 输入显示区
+    const display = document.createElement('div');
+    display.style.cssText = 'display:flex;gap:10px;justify-content:center;margin:12px 0;min-height:44px;align-items:center;';
+    for (let i = 0; i < this.answer.length; i++) {
+      const slot = document.createElement('div');
+      slot.style.cssText = 'width:42px;height:42px;border:2px dashed #444;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;transition:all 0.2s;';
+      if (this.input[i] !== undefined) {
+        slot.textContent = this.symbols[this.input[i]].emoji;
+        slot.style.borderColor = this._error ? '#c44' : 'var(--gold)';
+        slot.style.borderStyle = 'solid';
+        slot.style.background = this._error ? 'rgba(204,68,68,0.15)' : 'rgba(196,163,90,0.15)';
+      }
+      display.appendChild(slot);
+    }
+    this.container.appendChild(display);
+
+    // 符号按钮区（打乱显示顺序）
+    const btnGrid = document.createElement('div');
+    btnGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0;';
+    this._order.forEach(i => {
+      const sym = this.symbols[i];
+      const btn = document.createElement('button');
+      btn.style.cssText = 'width:56px;height:56px;background:#1a1a2e;border:2px solid #333;border-radius:8px;cursor:pointer;font-size:1.6rem;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+      btn.innerHTML = '<span style="font-size:1.4rem;">' + sym.emoji + '</span><span style="font-size:0.65rem;color:var(--text-dim);">' + sym.label + '</span>';
+      btn.addEventListener('click', () => {
+        if (self._error) return;
+        if (self.input.length >= self.answer.length) return;
+        self.input.push(i);
+        if (self.audio) self.audio.sfxClick();
+        self.render();
+      });
+      btnGrid.appendChild(btn);
+    });
+    this.container.appendChild(btnGrid);
+
+    // 操作按钮
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;margin-top:8px;';
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'puzzle-reset-btn';
+    backBtn.textContent = '退格';
+    backBtn.addEventListener('click', () => {
+      if (self._error) return;
+      self.input.pop();
+      self.render();
+    });
+    btnRow.appendChild(backBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'puzzle-reset-btn';
+    resetBtn.textContent = '重置';
+    resetBtn.addEventListener('click', () => {
+      self.input = [];
+      self._error = false;
+      self.render();
+    });
+    btnRow.appendChild(resetBtn);
+
+    if (this.input.length === this.answer.length) {
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'puzzle-reset-btn';
+      submitBtn.style.cssText = 'border-color:var(--gold);color:var(--gold);';
+      submitBtn.textContent = '确认';
+      submitBtn.addEventListener('click', () => {
+        const match = self.input.every((v, i) => v === self.answer[i]);
+        if (match) {
+          self.onSolve();
+        } else {
+          self._error = true;
+          self.render();
+          setTimeout(() => {
+            self.input = [];
+            self._error = false;
+            self.render();
+          }, 800);
+        }
+      });
+      btnRow.appendChild(submitBtn);
+    }
+
+    this.container.appendChild(btnRow);
+  }
+}

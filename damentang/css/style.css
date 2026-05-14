@@ -20,15 +20,18 @@
 html, body {
   width: 100%; height: 100%; overflow: hidden;
   background: #000;
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', 'STSong', 'Songti SC', serif;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'SimSun', 'STSong', serif;
   color: var(--text-main);
   user-select: none;
   -webkit-user-select: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ===== 全局覆盖层（开场 / 结局） ===== */
 #overlay-screen {
   position: fixed; inset: 0; z-index: 100;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background: radial-gradient(ellipse at 50% 40%, #0f0f24 0%, #060610 60%, #000 100%);
   display: flex; align-items: center; justify-content: center;
   transition: opacity 0.8s ease, background 1.5s ease;
@@ -51,7 +54,7 @@ html, body {
   margin-bottom: 40px;
   text-shadow: 0 0 30px rgba(196, 163, 90, 0.3);
   opacity: 0;
-  font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'KaiTi', 'STKaiti', '楷体', '华文楷体', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'PingFang SC', 'KaiTi', 'STKaiti', '楷体', '华文楷体', 'Noto Serif SC', serif;
   animation: titleFadeIn 1.5s ease forwards;
 }
 #overlay-title.hidden {
@@ -84,7 +87,7 @@ html, body {
 #overlay-text.visible { opacity: 1; }
 
 #overlay-btn, #overlay-btn2 {
-  position: fixed; bottom: 60px;
+  position: fixed; bottom: calc(60px + env(safe-area-inset-bottom));
   background: none; border: 1px solid var(--ui-border);
   color: var(--text-dim);
   padding: 8px 22px;
@@ -98,7 +101,7 @@ html, body {
 }
 #overlay-btn2 {
   left: 50%; transform: translateX(-50%);
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
 }
 #overlay-btn:hover, #overlay-btn2:hover {
   color: var(--gold); border-color: var(--gold);
@@ -107,7 +110,7 @@ html, body {
 
 /* ===== 游戏容器 ===== */
 #game-container {
-  width: 100%; max-width: 1000px; height: 100vh;
+  width: 100%; max-width: 1000px; height: 100vh; height: 100dvh;
   margin: 0 auto;
   display: flex; flex-direction: column;
   background: var(--bg-deep);
@@ -265,7 +268,7 @@ html, body {
   font-size: 1.4rem; letter-spacing: 0.3em;
   color: var(--text-dim);
   text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-  font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'KaiTi', 'STKaiti', '楷体', '华文楷体', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'PingFang SC', 'KaiTi', 'STKaiti', '楷体', '华文楷体', 'Noto Serif SC', serif;
   pointer-events: none;
 }
 
@@ -277,7 +280,7 @@ html, body {
   color: var(--text-dim);
   font-size: 2rem;
   cursor: pointer;
-  padding: 12px 8px;
+  padding: 14px 12px;
   transition: color 0.2s, text-shadow 0.2s;
 }
 .nav-arrow:hover {
@@ -288,16 +291,16 @@ html, body {
 .nav-arrow.locked:hover { color: var(--accent); text-shadow: 0 0 10px rgba(139, 37, 0, 0.4); }
 #nav-left  { left: 6px; }
 #nav-right { right: 6px; }
-#nav-down  { top: auto; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 1.8rem; }
+#nav-down  { top: auto; bottom: calc(10px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 1.8rem; }
 #nav-down.hidden { display: none; }
 
 /* 顶部按钮 */
 .top-btn {
-  position: absolute; top: 14px; z-index: 10;
+  position: absolute; top: calc(14px + env(safe-area-inset-top)); z-index: 10;
   background: none; border: none;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 8px 12px;
   opacity: 0.5;
   transition: opacity 0.2s;
 }
@@ -427,6 +430,7 @@ html, body {
 /* ===== 背包栏 ===== */
 #inventory-bar {
   height: 90px;
+  padding-bottom: env(safe-area-inset-bottom);
   background: var(--ui-bg); border-top: 1px solid var(--ui-border);
   display: flex; align-items: center; justify-content: center;
   z-index: 15;
@@ -434,7 +438,7 @@ html, body {
 .inv-page-btn {
   background: none; border: 1px solid var(--ui-border);
   color: var(--text-dim); font-size: 1.2rem;
-  cursor: pointer; padding: 4px 8px;
+  cursor: pointer; padding: 8px 12px;
   border-radius: 3px; margin: 0 4px;
   transition: color 0.2s, border-color 0.2s;
   flex-shrink: 0;
@@ -630,8 +634,8 @@ html, body {
 .puzzle-close-btn {
   position: absolute; top: 6px; right: 10px;
   background: none; border: none;
-  color: var(--text-dim); font-size: 1rem;
-  cursor: pointer; padding: 2px 6px;
+  color: var(--text-dim); font-size: 1.2rem;
+  cursor: pointer; padding: 6px 10px;
   transition: color 0.2s;
 }
 .puzzle-close-btn:hover { color: var(--accent); }
@@ -661,11 +665,24 @@ html, body {
   #overlay-title { font-size: 1.6rem; }
   #overlay-text { font-size: 0.9rem; }
   #holding-indicator { font-size: 0.75rem; top: 44px; padding: 4px 12px; }
-  .top-btn { font-size: 1rem; }
+  .top-btn { font-size: 1.15rem; padding: 6px 10px; }
   #btn-hint { right: 132px; }
   #btn-save { right: 98px; }
   #btn-notes { right: 66px; }
   .scene-img { width: 2.5rem; height: 2.5rem; }
   .inventory-slot .inv-img { width: 34px; height: 34px; }
   #item-detail-emoji .detail-img { width: 72px; height: 72px; }
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+  #game-container { height: 100dvh; }
+  #inventory-bar { height: 56px; }
+  #inventory-bar .inventory-slot { width: 40px; height: 40px; font-size: 1.3rem; }
+  #inventory-bar .inv-img { width: 28px; height: 28px; }
+  #scene-title { top: 8px; font-size: 0.9rem; }
+  .top-btn { top: calc(6px + env(safe-area-inset-top)); font-size: 1.1rem; padding: 4px 8px; }
+  .nav-arrow { font-size: 1.5rem; padding: 8px 10px; }
+  #dialog-box { bottom: 70px; padding: 12px 18px; }
+  #dialog-text { font-size: 0.9rem; margin-bottom: 10px; }
 }

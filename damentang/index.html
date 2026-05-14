@@ -7,9 +7,21 @@
   <meta name="description" content="大门塘（Damentang）是一款受锈湖启发的暗黑风格点触式解谜游戏。探索被遗忘的南方水乡，收集道具、破解谜题、揭开大门塘隐藏的秘密。">
   <meta name="theme-color" content="#0a0a14">
 
+  <!-- PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="大门塘">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- 字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" href="images/og-image.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/og-image.png">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -29,9 +41,9 @@
   <meta name="twitter:image" content="https://www.zengzhichao.com/damentang/images/og-image.png">
 
   <!-- 预加载首场景关键音频 -->
-  <link rel="preload" href="audio/amb_village.mp3" as="fetch">
-  <link rel="preload" href="audio/sfx_click.mp3" as="fetch">
-  <link rel="preload" href="audio/sfx_collect.mp3" as="fetch">
+  <link rel="preload" href="audio/amb_village.mp3" as="audio">
+  <link rel="preload" href="audio/sfx_click.mp3" as="audio">
+  <link rel="preload" href="audio/sfx_collect.mp3" as="audio">
 
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -89,6 +101,11 @@
     </div>
   </div>
 
-  <script src="js/game.js?v=0.9.0"></script>
+  <script src="js/data.js?v=0.9.1"></script>
+  <script src="js/audio.js?v=0.9.1"></script>
+  <script src="js/storage.js?v=0.9.1"></script>
+  <script src="js/puzzles.js?v=0.9.1"></script>
+  <script src="js/engine.js?v=0.9.1"></script>
+  <script src="js/main.js?v=0.9.1"></script>
 </body>
 </html>
