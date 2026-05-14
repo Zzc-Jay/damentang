@@ -495,7 +495,6 @@ html, body {
 .inventory-slot.selected {
   border-color: var(--gold-glow) !important;
   box-shadow: 0 0 16px rgba(232, 212, 139, 0.35) !important;
-  transform: scale(1.08);
   animation: selectedGlow 0.8s ease-in-out infinite;
 }
 @keyframes selectedGlow {
