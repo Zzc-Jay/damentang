@@ -1,97 +1,3 @@
-// ===================== 密码锁拼图引擎 =====================
-class CombinationPuzzle {
-  constructor(container, config, onSolve) {
-    this.container = container;
-    this.digits = config.digits || 3;
-    this.answer = config.answer || [1, 1, 1];
-    this.onSolve = onSolve;
-    this.current = new Array(this.digits).fill(0);
-  }
-
-  render() {
-    this.container.innerHTML = '';
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:12px;justify-content:center;align-items:center;margin:16px 0;';
-
-    for (let d = 0; d < this.digits; d++) {
-      const wheel = document.createElement('div');
-      wheel.style.cssText = 'text-align:center;';
-
-      const upBtn = document.createElement('button');
-      upBtn.textContent = '▲';
-      upBtn.className = 'puzzle-reset-btn';
-      upBtn.style.cssText = 'display:block;margin:0 auto 4px;padding:2px 10px;';
-      const self = this;
-      upBtn.addEventListener('click', function () {
-        self.current[d] = (self.current[d] + 1) % 10;
-        self.render();
-      });
-
-      const digit = document.createElement('div');
-      digit.style.cssText = 'font-size:2rem;color:var(--gold);font-family:monospace;min-width:36px;text-align:center;';
-      digit.textContent = this.current[d];
-
-      const downBtn = document.createElement('button');
-      downBtn.textContent = '▼';
-      downBtn.className = 'puzzle-reset-btn';
-      downBtn.style.cssText = 'display:block;margin:4px auto 0;padding:2px 10px;';
-      downBtn.addEventListener('click', function () {
-        self.current[d] = (self.current[d] + 9) % 10; // -1 mod 10
-        self.render();
-      });
-
-      wheel.appendChild(upBtn);
-      wheel.appendChild(digit);
-      wheel.appendChild(downBtn);
-      row.appendChild(wheel);
-    }
-    this.container.appendChild(row);
-
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;margin-top:8px;';
-
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'puzzle-reset-btn';
-    resetBtn.textContent = '重置';
-    resetBtn.addEventListener('click', () => {
-      this.current = new Array(this.digits).fill(0);
-      this.render();
-    });
-    btnRow.appendChild(resetBtn);
-
-    const submitBtn = document.createElement('button');
-    submitBtn.className = 'puzzle-reset-btn';
-    submitBtn.textContent = '确认';
-    submitBtn.style.cssText = 'border-color:var(--gold);color:var(--gold);';
-    const self = this;
-    submitBtn.addEventListener('click', function () {
-      if (self._check()) {
-        self.onSolve();
-      } else {
-        // 错误反馈：红色闪烁 + 震动
-        submitBtn.style.borderColor = '#c44';
-        submitBtn.style.color = '#c44';
-        submitBtn.style.animation = 'shake 0.4s ease';
-        setTimeout(() => {
-          submitBtn.style.borderColor = 'var(--gold)';
-          submitBtn.style.color = 'var(--gold)';
-          submitBtn.style.animation = '';
-        }, 400);
-      }
-    });
-    btnRow.appendChild(submitBtn);
-
-    this.container.appendChild(btnRow);
-  }
-
-  _check() {
-    for (let i = 0; i < this.digits; i++) {
-      if (this.current[i] !== this.answer[i]) return false;
-    }
-    return true;
-  }
-}
-
 // ===================== 顺序谜题引擎 =====================
 class SequencePuzzle {
   constructor(container, config, onSolve) {
@@ -178,8 +84,37 @@ class LightPuzzle {
     this.source = config.source || { row: 0, col: 0, dir: 'E' };
     this.target = config.target || { row: 3, col: 3 };
     this.onSolve = onSolve;
-    // 深拷贝 mirrors 数据
-    this.current = this.mirrors.map(m => ({ ...m }));
+    // 随机化初始镜面方向，确保初始状态不可直达终点
+    this.current = this._randomUnsolvedConfig();
+    this._initialState = this.current.map(m => ({ ...m }));
+  }
+
+  _randomOrientation() {
+    const dirs = ['NE', 'NW', 'SW', 'SE'];
+    return dirs[Math.floor(Math.random() * 4)];
+  }
+
+  _randomUnsolvedConfig() {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const config = this.mirrors.map(m => ({
+        ...m,
+        orientation: this._randomOrientation()
+      }));
+      this.current = config;
+      if (!this._simulate()) return config;
+    }
+    // 200 次均碰巧可解 → 将所有镜面旋转 1 步作为兜底
+    const fallback = this.mirrors.map(m => ({
+      ...m,
+      orientation: this._nextOrientation(m.orientation)
+    }));
+    this.current = fallback;
+    return fallback;
+  }
+
+  _nextOrientation(ori) {
+    const dirs = ['NE', 'NW', 'SW', 'SE'];
+    return dirs[(dirs.indexOf(ori) + 1) % 4];
   }
 
   _rotate(row, col) {
@@ -310,7 +245,7 @@ class LightPuzzle {
     resetBtn.className = 'puzzle-reset-btn';
     resetBtn.textContent = '重置';
     resetBtn.addEventListener('click', () => {
-      this.current = this.mirrors.map(m => ({ ...m }));
+      this.current = this._initialState.map(m => ({ ...m }));
       this.render();
     });
     btnRow.appendChild(resetBtn);
@@ -559,228 +494,3 @@ class PatternPuzzle {
   }
 }
 
-// ===================== 记忆配对谜题引擎 =====================
-class MemoryPuzzle {
-  constructor(container, config, onSolve) {
-    this.container = container;
-    this.pairs = config.pairs || [];
-    this.cols = config.cols || 4;
-    this.onSolve = onSolve;
-    this.flipped = [];
-    this.matched = new Set();
-    this._locked = false;
-    this.attempts = 0;
-    this._initTiles();
-  }
-
-  _initTiles() {
-    this.tiles = [];
-    this.pairs.forEach((pair, i) => {
-      this.tiles.push({ pairIdx: i, emoji: pair[0], label: pair[1], id: i * 2 });
-      this.tiles.push({ pairIdx: i, emoji: pair[0], label: pair[1], id: i * 2 + 1 });
-    });
-    for (let i = this.tiles.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this.tiles[i], this.tiles[j]] = [this.tiles[j], this.tiles[i]];
-    }
-  }
-
-  render() {
-    this.container.innerHTML = '';
-    const self = this;
-
-    const clue = document.createElement('p');
-    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:8px;font-size:0.85rem;';
-    clue.textContent = '翻牌找到相同的配对 · 已配对 ' + this.matched.size + '/' + this.pairs.length;
-    this.container.appendChild(clue);
-
-    const grid = document.createElement('div');
-    grid.style.cssText = `display:grid;grid-template-columns:repeat(${this.cols}, 64px);gap:6px;justify-content:center;`;
-
-    this.tiles.forEach((tile, idx) => {
-      const cell = document.createElement('div');
-      cell.style.cssText = 'width:64px;height:64px;background:#1a1a2e;border:2px solid #333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;cursor:pointer;transition:all 0.3s;user-select:none;';
-      cell.textContent = '?';
-
-      const isMatched = this.matched.has(tile.pairIdx);
-      const isFlipped = this.flipped.find(f => f.idx === idx);
-
-      if (isMatched) {
-        cell.style.background = '#1a281a';
-        cell.style.borderColor = '#4a6a4a';
-        cell.style.cursor = 'default';
-        cell.textContent = tile.emoji;
-      } else if (isFlipped) {
-        cell.textContent = isFlipped.tile.emoji;
-        cell.style.background = '#2a2010';
-        cell.style.borderColor = 'var(--gold)';
-        cell.style.cursor = 'default';
-      }
-
-      cell.addEventListener('click', () => {
-        if (self._locked) return;
-        if (self.matched.has(tile.pairIdx)) return;
-        if (self.flipped.find(f => f.idx === idx)) return;
-        if (self.flipped.length >= 2) return;
-
-        self.flipped.push({ idx, tile });
-        if (self.audio) self.audio.sfxClick();
-        self.render();
-
-        if (self.flipped.length === 2) {
-          self._locked = true;
-          self.attempts++;
-          const [a, b] = self.flipped;
-          if (a.tile.pairIdx === b.tile.pairIdx) {
-            self.matched.add(a.tile.pairIdx);
-            self.flipped = [];
-            self._locked = false;
-            if (self.audio) self.audio.sfxCollect();
-            self.render();
-            if (self.matched.size === self.pairs.length) {
-              setTimeout(() => self.onSolve(), 500);
-            }
-          } else {
-            setTimeout(() => {
-              self.flipped = [];
-              self._locked = false;
-              self.render();
-            }, 700);
-          }
-        }
-      });
-
-      grid.appendChild(cell);
-    });
-    this.container.appendChild(grid);
-
-    const info = document.createElement('p');
-    info.style.cssText = 'color:var(--text-dim);text-align:center;font-size:0.8rem;margin-top:6px;';
-    info.textContent = '尝试次数: ' + this.attempts;
-    this.container.appendChild(info);
-
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'puzzle-reset-btn';
-    resetBtn.textContent = '重新开始';
-    resetBtn.addEventListener('click', () => {
-      this.matched = new Set();
-      this.flipped = [];
-      this._locked = false;
-      this.attempts = 0;
-      this._initTiles();
-      this.render();
-    });
-    this.container.appendChild(resetBtn);
-  }
-}
-
-// ===================== 符文输入谜题引擎 =====================
-class SymbolInputPuzzle {
-  constructor(container, config, onSolve) {
-    this.container = container;
-    this.symbols = config.symbols || [];
-    this.answer = config.answer || [];
-    this.onSolve = onSolve;
-    this.input = [];
-    this._error = false;
-    // 打乱按钮显示顺序，避免答案就是从左到右
-    this._order = this.symbols.map((_, i) => i);
-    for (let i = this._order.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this._order[i], this._order[j]] = [this._order[j], this._order[i]];
-    }
-  }
-
-  render() {
-    this.container.innerHTML = '';
-    const self = this;
-
-    const clue = document.createElement('p');
-    clue.style.cssText = 'color:var(--text-dim);text-align:center;margin-bottom:10px;font-size:0.85rem;';
-    clue.textContent = '按正确顺序点击符文，输入密码';
-    this.container.appendChild(clue);
-
-    // 输入显示区
-    const display = document.createElement('div');
-    display.style.cssText = 'display:flex;gap:10px;justify-content:center;margin:12px 0;min-height:44px;align-items:center;';
-    for (let i = 0; i < this.answer.length; i++) {
-      const slot = document.createElement('div');
-      slot.style.cssText = 'width:42px;height:42px;border:2px dashed #444;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;transition:all 0.2s;';
-      if (this.input[i] !== undefined) {
-        slot.textContent = this.symbols[this.input[i]].emoji;
-        slot.style.borderColor = this._error ? '#c44' : 'var(--gold)';
-        slot.style.borderStyle = 'solid';
-        slot.style.background = this._error ? 'rgba(204,68,68,0.15)' : 'rgba(196,163,90,0.15)';
-      }
-      display.appendChild(slot);
-    }
-    this.container.appendChild(display);
-
-    // 符号按钮区（打乱显示顺序）
-    const btnGrid = document.createElement('div');
-    btnGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0;';
-    this._order.forEach(i => {
-      const sym = this.symbols[i];
-      const btn = document.createElement('button');
-      btn.style.cssText = 'width:56px;height:56px;background:#1a1a2e;border:2px solid #333;border-radius:8px;cursor:pointer;font-size:1.6rem;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-      btn.innerHTML = '<span style="font-size:1.4rem;">' + sym.emoji + '</span><span style="font-size:0.65rem;color:var(--text-dim);">' + sym.label + '</span>';
-      btn.addEventListener('click', () => {
-        if (self._error) return;
-        if (self.input.length >= self.answer.length) return;
-        self.input.push(i);
-        if (self.audio) self.audio.sfxClick();
-        self.render();
-      });
-      btnGrid.appendChild(btn);
-    });
-    this.container.appendChild(btnGrid);
-
-    // 操作按钮
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;margin-top:8px;';
-
-    const backBtn = document.createElement('button');
-    backBtn.className = 'puzzle-reset-btn';
-    backBtn.textContent = '退格';
-    backBtn.addEventListener('click', () => {
-      if (self._error) return;
-      self.input.pop();
-      self.render();
-    });
-    btnRow.appendChild(backBtn);
-
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'puzzle-reset-btn';
-    resetBtn.textContent = '重置';
-    resetBtn.addEventListener('click', () => {
-      self.input = [];
-      self._error = false;
-      self.render();
-    });
-    btnRow.appendChild(resetBtn);
-
-    if (this.input.length === this.answer.length) {
-      const submitBtn = document.createElement('button');
-      submitBtn.className = 'puzzle-reset-btn';
-      submitBtn.style.cssText = 'border-color:var(--gold);color:var(--gold);';
-      submitBtn.textContent = '确认';
-      submitBtn.addEventListener('click', () => {
-        const match = self.input.every((v, i) => v === self.answer[i]);
-        if (match) {
-          self.onSolve();
-        } else {
-          self._error = true;
-          self.render();
-          setTimeout(() => {
-            self.input = [];
-            self._error = false;
-            self.render();
-          }, 800);
-        }
-      });
-      btnRow.appendChild(submitBtn);
-    }
-
-    this.container.appendChild(btnRow);
-  }
-}

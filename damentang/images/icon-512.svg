@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0a0a14"/>
+  <ellipse cx="256" cy="310" rx="170" ry="120" fill="#0d0d1f" stroke="#c4a35a" stroke-width="16" opacity="0.9"/>
+  <ellipse cx="256" cy="330" rx="60" ry="30" fill="#c4a35a" opacity="0.25"/>
+  <text x="256" y="160" text-anchor="middle" font-family="serif" font-size="72" fill="#c4a35a" opacity="0.6">门</text>
+</svg>

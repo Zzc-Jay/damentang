@@ -609,7 +609,7 @@ class GameEngine {
     var hasTruth = this.state.inventory.includes('hidden_truth');
 
     this.$dialogText.textContent =
-      '匕首完美地嵌入了封印的中央。\n\n封印开始剧烈地震动——\n四个圆环全部亮起，整个房间都在颤抖。\n\n一个声音在你脑海中响起：\n\n"守门人的后代，做出你的选择。"' +
+      '匕首完美地嵌入了封印的中央。\n\n刃上的四个符文——🜂 火 · 🜄 水 · 🜁 风 · 🜃 土——逐一发出微光。\n\n你想起祖父日记中的话：\n"如果封印是守护，\n为什么需要血来维持？"\n\n你握紧匕首，割破了掌心。\n血沿着刀刃滴落——\n落在封印上时，发出了一声低沉的回响。\n\n塘底的东西醒了。\n它在听。\n\n封印开始剧烈地震动——\n四个圆环全部亮起，整个房间都在颤抖。\n\n一个声音在你脑海中响起：\n\n"守门人的后代，做出你的选择。"' +
       (hasTruth ?
         '\n\n你紧紧握着从照片和信件中发现的真相——\n封印不是守护，是囚禁。\n历代守门人守护的不是家园，\n而是一个谎言。' :
         '\n\n祖父用一生守护这个秘密，\n姑母用一生逃避它。\n而现在，轮到你了。') +
@@ -840,10 +840,7 @@ class GameEngine {
       }, 350);
     };
 
-    if (config.type === 'combination') {
-      const puzzle = new CombinationPuzzle(area, config, onSolve);
-      puzzle.render();
-    } else if (config.type === 'sequence') {
+    if (config.type === 'sequence') {
       const puzzle = new SequencePuzzle(area, config, onSolve);
       puzzle.audio = self.audio;
       puzzle.render();
@@ -852,14 +849,6 @@ class GameEngine {
       puzzle.render();
     } else if (config.type === 'pattern') {
       const puzzle = new PatternPuzzle(area, config, onSolve);
-      puzzle.audio = self.audio;
-      puzzle.render();
-    } else if (config.type === 'memory') {
-      const puzzle = new MemoryPuzzle(area, config, onSolve);
-      puzzle.audio = self.audio;
-      puzzle.render();
-    } else if (config.type === 'symbol') {
-      const puzzle = new SymbolInputPuzzle(area, config, onSolve);
       puzzle.audio = self.audio;
       puzzle.render();
     } else if (config.type === 'sliding') {

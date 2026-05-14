@@ -9,9 +9,15 @@
   "theme_color": "#0a0a14",
   "icons": [
     {
-      "src": "images/og-image.png",
-      "sizes": "1200x630",
-      "type": "image/png"
+      "src": "images/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
     }
   ],
   "lang": "zh-CN"
