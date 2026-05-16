@@ -2,10 +2,12 @@
 class GameEngine {
   constructor() {
     this.audio = new AudioManager();
+    this.DEBUG = window.location.search.includes('debug');
     this.state = {
       phase: 'opening',         // 'opening' | 'playing' | 'ending'
       openingStep: 0,
       currentSceneId: 'village_entrance',
+      navigationHistory: [],
       inventory: [],
       collectedElements: {},
       flags: {},
@@ -19,8 +21,23 @@ class GameEngine {
       }
     };
     this._clickTimer = null;
+    this._revealedElements = new Set();
     this.cacheDom();
-    this.startOpening();
+    window.addEventListener('resize', () => this.resizeScene());
+    if (this.DEBUG) {
+      this.state.phase = 'playing';
+      this.state.openingDone = true;
+      this.$overlay.classList.add('fade-out');
+      this.$container.classList.remove('hidden');
+      this.resizeScene();
+      this.audio.init();
+      this.loadSettings();
+      this.bindGameEvents();
+      this.renderInventory();
+      this.loadScene('village_entrance');
+    } else {
+      this.startOpening();
+    }
   }
 
   // ===================== DOM 缓存 =====================
@@ -32,6 +49,8 @@ class GameEngine {
     this.$overlayBtn2  = document.getElementById('overlay-btn2');
 
     this.$container    = document.getElementById('game-container');
+    if (this.DEBUG) this.$container.classList.add('debug-mode');
+    this.$wrapper      = document.getElementById('scene-wrapper');
     this.$bg           = document.getElementById('scene-background');
     this.$elements     = document.getElementById('scene-elements');
     this.$title        = document.getElementById('scene-title');
@@ -132,6 +151,7 @@ class GameEngine {
     this.state.openingDone = true;
     this.$overlay.classList.add('fade-out');
     this.$container.classList.remove('hidden');
+    this.resizeScene();
     this.audio.init();
     this.loadSettings();
     this.bindGameEvents();
@@ -218,9 +238,7 @@ class GameEngine {
 
   // ===================== 事件绑定 =====================
   bindGameEvents() {
-    this.$navLeft.addEventListener('click', () => this.tryNavigate('left'));
-    this.$navRight.addEventListener('click', () => this.tryNavigate('right'));
-    this.$navDown.addEventListener('click', () => this.tryNavigate('down'));
+    this.$navDown.addEventListener('click', () => this.goBack());
 
     this.$dialogClose.addEventListener('click', () => this.hideDialog());
     this.$choiceA.addEventListener('click', () => this.handleChoice('A'));
@@ -252,9 +270,8 @@ class GameEngine {
         return;
       }
       switch (e.key) {
-        case 'ArrowLeft':  this.tryNavigate('left'); break;
-        case 'ArrowRight': this.tryNavigate('right'); break;
-        case 'ArrowDown':  this.tryNavigate('down'); break;
+        case 'ArrowLeft':
+        case 'ArrowDown':  this.goBack(); break;
         case 'Escape':
           if (document.getElementById('puzzle-overlay')) {
             document.getElementById('puzzle-overlay').remove();
@@ -270,15 +287,8 @@ class GameEngine {
     });
 
     document.getElementById('btn-hint').addEventListener('click', () => {
-      const hints = {
-        village_entrance: '仔细观察村口的每一个角落。\n塘边的船里也许有线索……\n漆黑的水面下似乎沉着什么东西，\n也许需要工具才能捞上来。',
-        ancestral_hall: '试试把蜡烛用在香炉上。\n别忘了检查供台下面。\n匕首也许能打开什么东西。\n\n木匾上刻着三兄弟守护的顺序——\n注意看谁先谁后。\n牌位上的生辰和五行对应关系，\n或许书房木盒的符文顺序会用到。',
-        study: '书桌上的木盒需要密码，祠堂牌位的符文记载了线索。\n打开木盒后，抽屉也会随之解锁。\n\n墙上的木格机关要求排列三房顺序——\n书架上的《三房纪事》记载了守护先后。\n解出后可获得打开走廊门的符纸。',
-        bedroom: '枕头下面似乎藏着什么东西。\n衣柜背板上有一个九宫格拼图——\n滑动木块拼成正确的排列。\n祠堂的木匾上似乎刻着排列线索……\n解开后或许能得到重要的线索。\n\n如果你有令牌——试试暗门上的封印。',
-        dark_passage: '石壁上的铜镜可以旋转——\n点击铜镜改变方向，让光线在镜面之间反弹，\n最终汇聚到目标的凹槽上。\n\n解开光线谜题后，护符和石门就会显现。',
-        seal_chamber: '封印表面覆盖着符阵锁——\n九个光点排成方形，需要用正确的顺序描画。\n线索藏在祖宅的某个角落……\n\n解开符阵后，用祭祀匕首插入封印——\n做出最终的选择。'
-      };
-      this.showDialog(hints[this.state.currentSceneId] || '四处看看，也许会有发现。');
+      const scene = SCENES[this.state.currentSceneId];
+      this.showDialog((scene && scene.hint) || '四处看看，也许会有发现。');
     });
 
     document.getElementById('btn-save').addEventListener('click', () => {
@@ -308,6 +318,7 @@ class GameEngine {
     this.state.openingDone = save.openingDone || false;
     this.state.endingSeen = save.endingSeen || null;
     this.state.inventoryPage = save.inventoryPage || 0;
+    this.state.navigationHistory = [];
 
     this.renderInventory();
     this.loadScene(this.state.currentSceneId);
@@ -329,22 +340,76 @@ class GameEngine {
     setTimeout(() => toast.remove(), 2000);
   }
 
+  // ===================== 场景尺寸自适应 =====================
+  resizeScene() {
+    const maxW = Math.min(window.innerWidth, 1000);
+    const invBar = document.getElementById('inventory-bar');
+    const invH = invBar ? invBar.offsetHeight : 70;
+    const maxH = window.innerHeight - invH;
+    const ratio = 16 / 9;
+    let w, h;
+    if (maxW / maxH > ratio) {
+      h = maxH;
+      w = Math.round(h * ratio);
+    } else {
+      w = maxW;
+      h = Math.round(w / ratio);
+    }
+    this.$wrapper.style.width  = w + 'px';
+    this.$wrapper.style.height = h + 'px';
+  }
+
   // ===================== 场景管理 =====================
-  loadScene(sceneId) {
+  loadScene(sceneId, fromHistory) {
     const scene = SCENES[sceneId];
     if (!scene) return;
+
+    // 前进时压入历史栈（返回时不再重复压栈，相同场景也不压栈）
+    if (!fromHistory && this.state.currentSceneId && this.state.currentSceneId !== sceneId) {
+      this.state.navigationHistory.push(this.state.currentSceneId);
+    }
 
     this.deselectItem();
     this.state.currentSceneId = sceneId;
 
-    // 暗道始终使用深处模式
-    if (scene.id === 'dark_passage') {
-      this.$title.textContent = '通道深处';
-      this.$bg.style.background = 'radial-gradient(ellipse at 50% 60%, #020203 0%, #000 80%, #000 100%)';
-    } else {
-      this.$title.textContent = scene.name;
-      if (scene.bgGradient) this.$bg.style.background = scene.bgGradient;
-    }
+    this.$title.textContent = scene.name;
+    this._bgOk = false;
+    if (scene.bgImage) {
+        // 先用渐变兜底，背景图加载成功后再切换
+        if (scene.bgGradient) {
+          this.$bg.style.background = scene.bgGradient;
+          this.$bg.style.backgroundImage = '';
+        }
+        var preload = new Image();
+        var self = this;
+        preload.onload = function() {
+          self._bgOk = true;
+          self.$bg.style.background = '';
+          self.$bg.style.backgroundImage = 'url(' + scene.bgImage + ')';
+          self.$bg.style.backgroundSize = 'cover';
+          self.$bg.style.backgroundPosition = 'center center';
+          self.$bg.style.backgroundRepeat = 'no-repeat';
+          // 背景图加载成功，重绘为 bgOverlay 模式
+          self.renderScene(scene);
+        };
+        preload.onerror = function() {
+          self._bgOk = false;
+          // 保持渐变兜底
+        };
+        preload.src = scene.bgImage;
+        // 缓存命中时立即生效
+        if (preload.complete && preload.naturalWidth > 0) {
+          this._bgOk = true;
+          this.$bg.style.background = '';
+          this.$bg.style.backgroundImage = 'url(' + scene.bgImage + ')';
+          this.$bg.style.backgroundSize = 'cover';
+          this.$bg.style.backgroundPosition = 'center center';
+          this.$bg.style.backgroundRepeat = 'no-repeat';
+        }
+      } else if (scene.bgGradient) {
+        this.$bg.style.backgroundImage = '';
+        this.$bg.style.background = scene.bgGradient;
+      }
 
     // 场景 class（用于特殊动画）
     this.$elements.parentElement.className = '';
@@ -371,31 +436,21 @@ class GameEngine {
   }
 
   updateNavArrows(scene) {
-    if (scene.id === 'dark_passage') {
-      // 暗道：始终深处模式，左箭头隐藏，右箭头发光后显示
-      this.$navLeft.style.visibility = 'hidden';
-      if (this.state.flags['seal_door_open']) {
-        this.$navRight.style.visibility = 'visible';
-        this.$navRight.classList.remove('locked');
-      } else {
-        this.$navRight.style.visibility = 'hidden';
-      }
-      this.$navDown.classList.remove('hidden');
-      this.$navDown.classList.toggle('locked', false);
-    } else {
-      this.$navDown.classList.add('hidden');
-      ['left', 'right'].forEach(dir => {
-        const conn = scene.connections[dir];
-        const $arrow = dir === 'left' ? this.$navLeft : this.$navRight;
-        if (!conn) { $arrow.style.visibility = 'hidden'; return; }
-        $arrow.style.visibility = 'visible';
-        $arrow.classList.toggle('locked', conn.locked && !this.state.flags[conn.unlockFlag]);
-      });
-    }
+    // 左右箭头不再使用：前进通过场景中的门热区，返回通过返回热区
+    this.$navLeft.style.visibility = 'hidden';
+    this.$navRight.style.visibility = 'hidden';
+    this.$navDown.classList.add('hidden');
+  }
+
+  goBack() {
+    if (this.state.navigationHistory.length === 0) return;
+    const prev = this.state.navigationHistory.pop();
+    this.loadScene(prev, true);
   }
 
   renderScene(scene) {
     this.$elements.innerHTML = '';
+    const sceneHasBg = !!(scene.bgImage && this._bgOk);
     scene.elements.forEach(el => {
       // 可见性检查
       if (el.visibleWhen) {
@@ -408,22 +463,82 @@ class GameEngine {
       const div = document.createElement('div');
       div.className = 'scene-element ' + (el.type || '');
       if (el.cssClass) div.classList.add(el.cssClass);
+      // 场景有 bgImage 时，所有元素自动成为透明热区；
+      // 元素可单独设置 bgOverlay: false 来禁用（仍需显示 emoji/图片 时）
+      const isOverlay = (el.bgOverlay !== false) && (!!el.bgOverlay || sceneHasBg);
+      // 背景图坐标系 → 容器百分比换算
+      const bgW = scene.bgWidth  || 1920;
+      const bgH = scene.bgHeight || 1080;
+      if (isOverlay) {
+        // 条件触发元素不在背景图中，需显示图片/emoji，不加 bg-overlay（会隐藏文字）
+        if (!el.visibleWhen) div.classList.add('bg-overlay');
+        var ov = (typeof el.bgOverlay === 'object') ? el.bgOverlay : null;
+        if (ov) {
+          if (ov.w) { div.style.width = (ov.w / bgW * 100) + '%'; div.style.minWidth = '0'; }
+          if (ov.h) { div.style.height = (ov.h / bgH * 100) + '%'; div.style.minHeight = '0'; }
+          if (ov.rx != null) div.style.borderRadius = ov.rx + 'px';
+        } else {
+          div.style.width = (60 / bgW * 100) + '%'; div.style.minWidth = '0';
+          div.style.height = (60 / bgH * 100) + '%'; div.style.minHeight = '0';
+        }
+      }
       div.dataset.elementId = el.id;
       div.dataset.type = el.type;
       if (el.itemId) div.dataset.itemId = el.itemId;
-      // 图片优先，emoji 作为回退
-      if (el.img) {
+      // 渲染策略：
+      //   DEBUG 模式 → 所有元素显示彩色调试框（含 emoji + ID + 类型标签）
+      //   非 DEBUG  → 默认元素（已在背景图）透明热区；条件触发元素显示图片/emoji
+      const isConditional = !!(el.visibleWhen && el.visibleWhen.flag);
+      if (this.DEBUG) {
+        const typeColors = {
+          collectible: { bg: 'rgba(0,180,0,0.35)', border: '#0f0', label: '道具' },
+          hotspot:     { bg: 'rgba(0,180,180,0.3)', border: '#0ff', label: '热点' },
+          door:        { bg: 'rgba(200,180,0,0.3)', border: '#ff0', label: '门' },
+          npc:         { bg: 'rgba(180,0,180,0.3)', border: '#f0f', label: 'NPC' },
+          return:      { bg: 'rgba(0,80,180,0.3)',  border: '#48f', label: '返回' },
+          decoration:  { bg: 'rgba(100,100,100,0.25)', border: '#888', label: '装饰' }
+        };
+        const tc = typeColors[el.type] || typeColors.hotspot;
+        div.style.background = tc.bg;
+        div.style.outline = '2px dashed ' + tc.border;
+        div.style.outlineOffset = '-2px';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'center';
+        div.style.justifyContent = 'center';
+        div.style.overflow = 'hidden';
+        div.style.transition = 'none';
+        let displayEmoji = el.emoji || '';
+        let itemName = '';
+        if (el.type === 'collectible' && el.itemId) {
+          const item = ITEMS[el.itemId];
+          if (item) { displayEmoji = item.emoji; itemName = item.name; }
+        }
+        if (el.puzzle) displayEmoji = '🧩';
+        const condMark = isConditional ? ' ⚡' : '';
+        div.innerHTML = '<span style="font-size:1.3rem;line-height:1;filter:drop-shadow(0 0 2px #000);">' + displayEmoji + '</span>'
+          + '<span style="font-size:7px;line-height:1.1;opacity:0.85;text-shadow:0 0 3px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + el.id + condMark + '</span>'
+          + (itemName ? '<span style="font-size:7px;line-height:1.1;color:' + tc.border + ';text-shadow:0 0 3px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + itemName + '</span>' : '')
+          + '<span style="font-size:6px;line-height:1;opacity:0.6;color:' + tc.border + ';">' + tc.label + '</span>';
+      } else if (isOverlay && !isConditional) {
+        // 默认可见元素：背景图已画好，透明热区，不渲染内容
+      } else if (el.img) {
         const img = document.createElement('img');
         img.src = el.img;
         img.alt = el.emoji || '';
         img.className = 'scene-img';
         img.draggable = false;
         div.appendChild(img);
-      } else {
+      } else if (el.type !== 'npc') {
         div.textContent = el.emoji;
       }
-      div.style.left = el.x + '%';
-      div.style.top  = el.y + '%';
+      if (isOverlay) {
+        div.style.left = (el.x / bgW * 100) + '%';
+        div.style.top  = (el.y / bgH * 100) + '%';
+      } else {
+        div.style.left = el.x + '%';
+        div.style.top  = el.y + '%';
+      }
       if (el.puzzle) {
         div.dataset.hasPuzzle = '1';
         div.dataset.puzzleRewardDialog = el.puzzle.reward.dialog || '';
@@ -433,7 +548,10 @@ class GameEngine {
       }
 
       if (el.visibleWhen && this.state.flags[el.visibleWhen.flag]) {
-        div.classList.add('revealed');
+        if (!this._revealedElements.has(el.id)) {
+          this._revealedElements.add(el.id);
+          div.classList.add('revealed');
+        }
       }
 
       div.addEventListener('click', (e) => {
@@ -481,8 +599,24 @@ class GameEngine {
     }
     switch (el.type) {
       case 'collectible': this.collectItem(el); break;
-      case 'hotspot':
+      case 'return':
+        var retConn = SCENES[this.state.currentSceneId].connections.left;
+        if (retConn && !(retConn.locked && !this.state.flags[retConn.unlockFlag])) {
+          this.state.navigationHistory.pop();
+          this.loadScene(retConn.id, true);
+        }
+        break;
       case 'door':
+        // 检查前进连接是否已解锁 → 点击门进入下一场景
+        var doorScene = SCENES[this.state.currentSceneId];
+        var rightConn = doorScene.connections.right;
+        if (rightConn && !(rightConn.locked && !this.state.flags[rightConn.unlockFlag])) {
+          this.loadScene(rightConn.id);
+          break;
+        }
+        // 未解锁则 fall through 显示文本
+        /* falls through */
+      case 'hotspot':
       case 'npc':
         if (el.id === 'ritual_altar') {
           var hasTruth = this.state.inventory.includes('hidden_truth');
@@ -720,8 +854,21 @@ class GameEngine {
         const itemId = this.state.inventory[itemIdx];
         const item = ITEMS[itemId];
         if (item) {
-          // 道具栏使用 emoji 与场景保持一致，SVG 图片仅在详情弹窗中展示
-          slot.appendChild(document.createTextNode(item.emoji));
+          // 道具栏使用图片与场景、详情弹窗保持一致
+          if (item.img) {
+            const barImg = document.createElement('img');
+            barImg.src = item.img;
+            barImg.alt = item.emoji || '';
+            barImg.className = 'inv-img';
+            barImg.draggable = false;
+            barImg.onerror = function() {
+              this.style.display = 'none';
+              this.parentElement.appendChild(document.createTextNode(item.emoji));
+            };
+            slot.appendChild(barImg);
+          } else {
+            slot.appendChild(document.createTextNode(item.emoji));
+          }
           slot.title = item.name;
           if (itemId === this.state.selectedItem) slot.classList.add('selected');
           slot.addEventListener('click', () => {
@@ -768,11 +915,15 @@ class GameEngine {
     if (!item) return;
     this.$itemDetailEmoji.innerHTML = '';
     if (item.img) {
-      const img = document.createElement('img');
+      var img = document.createElement('img');
       img.src = item.img;
       img.alt = item.emoji || '';
       img.className = 'detail-img';
       img.draggable = false;
+      img.onerror = function() {
+        this.style.display = 'none';
+        this.parentElement.textContent = item.emoji;
+      };
       this.$itemDetailEmoji.appendChild(img);
     } else {
       this.$itemDetailEmoji.textContent = item.emoji;
