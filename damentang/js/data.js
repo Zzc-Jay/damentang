@@ -97,7 +97,7 @@ const SCENES = {
   village_entrance: {
     id: 'village_entrance', name: '村  口',
     hint: '仔细观察村口的每一个角落。\n塘边的船里也许有线索……\n漆黑的水面下似乎沉着什么东西，\n也许需要工具才能捞上来。',
-    bgImage: 'images/bg/bg_village_entrance.png',
+    bgImage: 'images/bg/bg_village_entrance.jpg',
     bgWidth: 1920, bgHeight: 1080,
     bgGradient: 'radial-gradient(ellipse at 50% 65%, #141428 0%, #0a0a18 60%, #050510 100%)',
     connections: {
@@ -138,7 +138,7 @@ const SCENES = {
   ancestral_hall: {
     id: 'ancestral_hall', name: '曾氏宗祠',
     hint: '试试把蜡烛用在香炉上。\n别忘了检查供台下面。\n匕首也许能打开什么东西。\n\n木匾上刻着三兄弟守护的顺序——\n注意看谁先谁后。\n牌位上的生辰和五行对应关系，\n或许书房木盒的符文顺序会用到。',
-    bgImage: 'images/bg/bg_ancestral_hall.png',
+    bgImage: 'images/bg/bg_ancestral_hall.jpg',
     bgWidth: 1920, bgHeight: 1080,
     bgGradient: 'radial-gradient(ellipse at 50% 50%, #1a1410 0%, #0e0a08 60%, #050302 100%)',
     connections: {
@@ -188,7 +188,7 @@ const SCENES = {
   study: {
     id: 'study', name: '书  房',
     hint: '书桌上的木盒需要密码，祠堂牌位的符文记载了线索。\n打开木盒后，抽屉也会随之解锁。\n\n墙上的木格机关要求排列三房顺序——\n书架上的《三房纪事》记载了守护先后。\n解出后可获得打开走廊门的符纸。',
-    bgImage: 'images/bg/bg_study.png',
+    bgImage: 'images/bg/bg_study.jpg',
     bgWidth: 1920, bgHeight: 1080,
     bgGradient: 'radial-gradient(ellipse at 50% 55%, #14181a 0%, #0a0e10 60%, #040608 100%)',
     connections: {
@@ -246,7 +246,7 @@ const SCENES = {
   bedroom: {
     id: 'bedroom', name: '卧  室',
     hint: '枕头下面似乎藏着什么东西。\n衣柜背板上有一个九宫格拼图——\n滑动木块拼成正确的排列。\n祠堂的木匾上似乎刻着排列线索……\n解开后或许能得到重要的线索。\n\n如果你有令牌——试试暗门上的封印。',
-    bgImage: 'images/bg/bg_bedroom.png',
+    bgImage: 'images/bg/bg_bedroom.jpg',
     bgWidth: 1920, bgHeight: 1080,
     bgGradient: 'radial-gradient(ellipse at 50% 55%, #181415 0%, #0e0a0b 60%, #050303 100%)',
     connections: {
@@ -296,7 +296,7 @@ const SCENES = {
   dark_passage: {
     id: 'dark_passage', name: '暗  道',
     hint: '石壁上的铜镜可以旋转——\n点击铜镜改变方向，让光线在镜面之间反弹，\n最终汇聚到目标的凹槽上。\n\n解开光线谜题后，护符和石门就会显现。',
-    bgImage: 'images/bg/bg_dark_passage.png',
+    bgImage: 'images/bg/bg_dark_passage.jpg',
     bgWidth: 1920, bgHeight: 1080,
     bgGradient: 'radial-gradient(ellipse at 50% 60%, #050508 0%, #020203 60%, #000 100%)',
     connections: {
@@ -353,7 +353,7 @@ const SCENES = {
   seal_chamber: {
     id: 'seal_chamber', name: '封印之间',
     hint: '封印表面覆盖着符阵锁——\n九个光点排成方形，需要用正确的顺序描画。\n线索藏在祖宅的某个角落……\n\n解开符阵后，用祭祀匕首插入封印——\n做出最终的选择。',
-    bgImage: 'images/bg/bg_seal_chamber.png',
+    bgImage: 'images/bg/bg_seal_chamber.jpg',
     bgWidth: 1920, bgHeight: 1080,
     bgGradient: 'radial-gradient(ellipse at 50% 55%, #1a1015 0%, #0a0508 60%, #030102 100%)',
     connections: {
