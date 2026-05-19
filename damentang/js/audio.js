@@ -26,8 +26,8 @@ class AudioManager {
       this.masterGain.connect(this.ctx.destination);
       // iOS Safari 挂起 AudioContext，需用户交互后恢复
       if (this.ctx.state === 'suspended') {
-        var self = this;
-        var resume = function () {
+        const self = this;
+        const resume = function () {
           if (self.ctx && self.ctx.state === 'suspended') self.ctx.resume();
         };
         document.addEventListener('click', resume, { once: true });
@@ -76,7 +76,7 @@ class AudioManager {
         audio.volume = this._sfxVol;
         audio.currentTime = 0;
         // 播放可能被浏览器拦截，用 catch 静默处理
-        var promise = audio.play();
+        const promise = audio.play();
         if (promise) promise.catch(function () {});
         return true;
       }
@@ -90,12 +90,12 @@ class AudioManager {
     this._ensureCtx();
     if (!this.ctx || !this.masterGain) return;
     delay = delay || 0;
-    var t = this.ctx.currentTime + delay;
-    var osc = this.ctx.createOscillator();
-    var gain = this.ctx.createGain();
+    const t = this.ctx.currentTime + delay;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
     osc.type = type || 'sine';
     osc.frequency.value = freq;
-    var v = (vol || 0.08) * this._sfxVol;
+    const v = (vol || 0.08) * this._sfxVol;
     gain.gain.setValueAtTime(v, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
     osc.connect(gain);
@@ -161,7 +161,7 @@ class AudioManager {
 
   // ---- 环境音 ----
   playAmbient(sceneId) {
-    var name = 'amb_village';
+    const name = 'amb_village';
     switch (sceneId) {
       case 'village_entrance': name = 'amb_village';   break;
       case 'ancestral_hall':   name = 'amb_hall';       break;
@@ -177,25 +177,25 @@ class AudioManager {
     if (this._ambientName === name) return;
     this._ambientName = name;
     try {
-      var next = this._loadAudio(name);
+      const next = this._loadAudio(name);
       if (!next) return;
       next.loop = true;
       next.volume = 0;
 
-      var prev = this._ambient;
+      const prev = this._ambient;
       this._ambient = next;
 
       next.currentTime = 0;
-      var p = next.play();
+      const p = next.play();
       if (p) p.catch(function () {});
 
       // 渐入 1.5s
-      var self = this;
-      var steps = 15;
-      var step = 0;
-      var iv = setInterval(function () {
+      const self = this;
+      const steps = 15;
+      const step = 0;
+      const iv = setInterval(function () {
         step++;
-        var vol = Math.min(self._ambientVol, self._ambientVol * (step / steps));
+        const vol = Math.min(self._ambientVol, self._ambientVol * (step / steps));
         next.volume = vol * self._masterVol;
         if (prev && step <= steps) {
           prev.volume = Math.max(0, self._ambientVol * (1 - step / steps)) * self._masterVol;

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="10" y="8" width="44" height="48" rx="2" fill="#1a1510" stroke="#8a7a60" stroke-width="1.5"/>
-  <rect x="14" y="12" width="36" height="36" fill="#251810"/>
-  <circle cx="26" cy="26" r="5" fill="none" stroke="#6a5a40" stroke-width="0.8"/>
-  <circle cx="38" cy="26" r="5" fill="none" stroke="#6a5a40" stroke-width="0.8"/>
-  <circle cx="32" cy="38" r="6" fill="none" stroke="#6a5a40" stroke-width="0.8"/>
-  <line x1="22" y1="48" x2="42" y2="48" stroke="#c4a35a" stroke-width="0.6"/>
-  <text x="32" y="50" text-anchor="middle" fill="#8a7a60" font-size="4">— 曾氏 —</text>
-</svg>

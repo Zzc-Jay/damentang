@@ -228,23 +228,6 @@ html, body {
   filter: none;
 }
 
-/* debug 模式：显示 bgOverlay 热区边界 + 图标标识 */
-.debug-mode .scene-element.bg-overlay {
-  /* 基础样式由 JS 内联设置 (颜色/布局) */
-  transition: none;
-}
-.debug-mode .scene-element.seal-core {
-  animation: none;
-  filter: none;
-}
-/* hover 高亮覆盖 */
-.debug-mode .scene-element.bg-overlay:hover {
-  background: rgba(255, 255, 0, 0.40) !important;
-  outline-color: #ffff00 !important;
-  box-shadow: 0 0 16px rgba(255, 255, 0, 0.55) !important;
-  transform: none;
-}
-
 /* 场景元素内的图片 */
 .scene-img {
   width: 3.5rem;
@@ -551,17 +534,17 @@ html, body {
 }
 
 /* ===== 笔记面板 ===== */
-#notes-panel {
+#notes-panel, #settings-panel {
   position: absolute; inset: 0; z-index: 30;
   background: rgba(5, 5, 15, 0.9);
   display: flex; align-items: center; justify-content: center;
 }
-#notes-content {
+#notes-content, #settings-content {
   background: var(--ui-bg); border: 1px solid var(--ui-border);
   border-radius: 6px; padding: 28px 32px;
   max-width: 500px; width: 85%; max-height: 70vh; overflow-y: auto;
 }
-#notes-content h3 {
+#notes-content h3, #settings-content h3 {
   text-align: center; color: var(--gold); letter-spacing: 0.2em;
   margin-bottom: 20px; font-size: 1.1rem;
 }
@@ -579,14 +562,14 @@ html, body {
   vertical-align: middle;
 }
 .note-entry .note-title { font-size: 1rem; }
-#notes-close {
+#notes-close, #settings-close {
   display: block; margin: 20px auto 0;
   background: none; border: 1px solid var(--ui-border);
   color: var(--text-dim); padding: 5px 20px;
   cursor: pointer; font-family: inherit; font-size: 0.85rem;
   transition: color 0.2s, border-color 0.2s;
 }
-#notes-close:hover { color: var(--gold); border-color: var(--gold); }
+#notes-close:hover, #settings-close:hover { color: var(--gold); border-color: var(--gold); }
 
 /* ===== 转场效果 ===== */
 .scene-transition {

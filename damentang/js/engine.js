@@ -2,7 +2,6 @@
 class GameEngine {
   constructor() {
     this.audio = new AudioManager();
-    this.DEBUG = window.location.search.includes('debug');
     this.state = {
       phase: 'opening',         // 'opening' | 'playing' | 'ending'
       openingStep: 0,
@@ -21,23 +20,16 @@ class GameEngine {
       }
     };
     this._clickTimer = null;
+    this._resizeTimer = null;
     this._revealedElements = new Set();
+    this._sceneEls = new Map();
+    this._lastSceneId = null;
     this.cacheDom();
-    window.addEventListener('resize', () => this.resizeScene());
-    if (this.DEBUG) {
-      this.state.phase = 'playing';
-      this.state.openingDone = true;
-      this.$overlay.classList.add('fade-out');
-      this.$container.classList.remove('hidden');
-      this.resizeScene();
-      this.audio.init();
-      this.loadSettings();
-      this.bindGameEvents();
-      this.renderInventory();
-      this.loadScene('village_entrance');
-    } else {
-      this.startOpening();
-    }
+    window.addEventListener('resize', () => {
+      clearTimeout(this._resizeTimer);
+      this._resizeTimer = setTimeout(() => this.resizeScene(), 150);
+    });
+    this.startOpening();
   }
 
   // ===================== DOM 缓存 =====================
@@ -49,7 +41,6 @@ class GameEngine {
     this.$overlayBtn2  = document.getElementById('overlay-btn2');
 
     this.$container    = document.getElementById('game-container');
-    if (this.DEBUG) this.$container.classList.add('debug-mode');
     this.$wrapper      = document.getElementById('scene-wrapper');
     this.$bg           = document.getElementById('scene-background');
     this.$elements     = document.getElementById('scene-elements');
@@ -193,8 +184,8 @@ class GameEngine {
     this.audio.sfxEnding();
 
     // 如果发现了隐藏真相，在结局中插入特殊内容
-    var hasTruth = this.state.inventory.includes('hidden_truth');
-    var lines = [...ending.lines];
+    const hasTruth = this.state.inventory.includes('hidden_truth');
+    const lines = [...ending.lines];
     if (hasTruth && endingKey === 'A') {
       // 加固封印 + 知道真相 → 苦涩的守护
       lines.splice(lines.length - 1, 0,
@@ -305,13 +296,13 @@ class GameEngine {
 
   // ===================== 存档 =====================
   loadGame(save) {
-    var sceneId = save.scene || 'village_entrance';
+    const sceneId = save.scene || 'village_entrance';
     // 兼容旧存档：移除的场景重定向
     if (sceneId === 'kitchen' || sceneId === 'maple_tree') sceneId = 'study';
     this.state.currentSceneId = sceneId;
     this.state.inventory = save.inventory || [];
     // 兼容旧道具ID
-    var idx = this.state.inventory.indexOf('kitchen_talisman');
+    const idx = this.state.inventory.indexOf('kitchen_talisman');
     if (idx >= 0) this.state.inventory[idx] = 'ancestral_ward';
     this.state.collectedElements = save.collected || {};
     this.state.flags = save.flags || {};
@@ -380,8 +371,8 @@ class GameEngine {
           this.$bg.style.background = scene.bgGradient;
           this.$bg.style.backgroundImage = '';
         }
-        var preload = new Image();
-        var self = this;
+        const preload = new Image();
+        const self = this;
         preload.onload = function() {
           self._bgOk = true;
           self.$bg.style.background = '';
@@ -423,7 +414,7 @@ class GameEngine {
     this.audio.playAmbient(scene.id);
 
     // 墨水晕染转场
-    var ink = document.createElement('div');
+    const ink = document.createElement('div');
     ink.id = 'ink-overlay';
     this.$elements.parentElement.appendChild(ink);
     setTimeout(function () { ink.remove(); }, 600);
@@ -449,30 +440,41 @@ class GameEngine {
   }
 
   renderScene(scene) {
-    this.$elements.innerHTML = '';
+    const sceneChanged = scene.id !== this._lastSceneId;
+    this._lastSceneId = scene.id;
+
+    // 场景切换 → 全量重建
+    if (sceneChanged) {
+      this.$elements.innerHTML = '';
+      this._sceneEls.clear();
+    }
+
     const sceneHasBg = !!(scene.bgImage && this._bgOk);
+    const bgW = scene.bgWidth  || 1920;
+    const bgH = scene.bgHeight || 1080;
+    const visibleIds = new Set();
+
     scene.elements.forEach(el => {
       // 可见性检查
       if (el.visibleWhen) {
         if (el.visibleWhen.flag && !this.state.flags[el.visibleWhen.flag]) return;
         if (el.visibleWhen.notFlag && this.state.flags[el.visibleWhen.notFlag]) return;
       }
-      // 已收集的不显示
       if ((el.type === 'collectible' || el.type === 'door') && this.state.collectedElements[el.id]) return;
 
+      visibleIds.add(el.id);
+
+      // 元素已在 DOM 中（同场景）→ 跳过
+      if (!sceneChanged && this._sceneEls.has(el.id)) return;
+
+      // 元素在 DOM 中但场景已切换 → 需重建，Map 稍后清理
       const div = document.createElement('div');
       div.className = 'scene-element ' + (el.type || '');
       if (el.cssClass) div.classList.add(el.cssClass);
-      // 场景有 bgImage 时，所有元素自动成为透明热区；
-      // 元素可单独设置 bgOverlay: false 来禁用（仍需显示 emoji/图片 时）
       const isOverlay = (el.bgOverlay !== false) && (!!el.bgOverlay || sceneHasBg);
-      // 背景图坐标系 → 容器百分比换算
-      const bgW = scene.bgWidth  || 1920;
-      const bgH = scene.bgHeight || 1080;
       if (isOverlay) {
-        // 条件触发元素不在背景图中，需显示图片/emoji，不加 bg-overlay（会隐藏文字）
         if (!el.visibleWhen) div.classList.add('bg-overlay');
-        var ov = (typeof el.bgOverlay === 'object') ? el.bgOverlay : null;
+        const ov = (typeof el.bgOverlay === 'object') ? el.bgOverlay : null;
         if (ov) {
           if (ov.w) { div.style.width = (ov.w / bgW * 100) + '%'; div.style.minWidth = '0'; }
           if (ov.h) { div.style.height = (ov.h / bgH * 100) + '%'; div.style.minHeight = '0'; }
@@ -485,43 +487,8 @@ class GameEngine {
       div.dataset.elementId = el.id;
       div.dataset.type = el.type;
       if (el.itemId) div.dataset.itemId = el.itemId;
-      // 渲染策略：
-      //   DEBUG 模式 → 所有元素显示彩色调试框（含 emoji + ID + 类型标签）
-      //   非 DEBUG  → 默认元素（已在背景图）透明热区；条件触发元素显示图片/emoji
-      const isConditional = !!(el.visibleWhen && el.visibleWhen.flag);
-      if (this.DEBUG) {
-        const typeColors = {
-          collectible: { bg: 'rgba(0,180,0,0.35)', border: '#0f0', label: '道具' },
-          hotspot:     { bg: 'rgba(0,180,180,0.3)', border: '#0ff', label: '热点' },
-          door:        { bg: 'rgba(200,180,0,0.3)', border: '#ff0', label: '门' },
-          npc:         { bg: 'rgba(180,0,180,0.3)', border: '#f0f', label: 'NPC' },
-          return:      { bg: 'rgba(0,80,180,0.3)',  border: '#48f', label: '返回' },
-          decoration:  { bg: 'rgba(100,100,100,0.25)', border: '#888', label: '装饰' }
-        };
-        const tc = typeColors[el.type] || typeColors.hotspot;
-        div.style.background = tc.bg;
-        div.style.outline = '2px dashed ' + tc.border;
-        div.style.outlineOffset = '-2px';
-        div.style.display = 'flex';
-        div.style.flexDirection = 'column';
-        div.style.alignItems = 'center';
-        div.style.justifyContent = 'center';
-        div.style.overflow = 'hidden';
-        div.style.transition = 'none';
-        let displayEmoji = el.emoji || '';
-        let itemName = '';
-        if (el.type === 'collectible' && el.itemId) {
-          const item = ITEMS[el.itemId];
-          if (item) { displayEmoji = item.emoji; itemName = item.name; }
-        }
-        if (el.puzzle) displayEmoji = '🧩';
-        const condMark = isConditional ? ' ⚡' : '';
-        div.innerHTML = '<span style="font-size:1.3rem;line-height:1;filter:drop-shadow(0 0 2px #000);">' + displayEmoji + '</span>'
-          + '<span style="font-size:7px;line-height:1.1;opacity:0.85;text-shadow:0 0 3px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + el.id + condMark + '</span>'
-          + (itemName ? '<span style="font-size:7px;line-height:1.1;color:' + tc.border + ';text-shadow:0 0 3px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + itemName + '</span>' : '')
-          + '<span style="font-size:6px;line-height:1;opacity:0.6;color:' + tc.border + ';">' + tc.label + '</span>';
-      } else if (isOverlay && !isConditional) {
-        // 默认可见元素：背景图已画好，透明热区，不渲染内容
+      if (isOverlay && !(el.visibleWhen && el.visibleWhen.flag)) {
+        // 默认可见元素：背景图已画好，透明热区
       } else if (el.img) {
         const img = document.createElement('img');
         img.src = el.img;
@@ -560,27 +527,18 @@ class GameEngine {
         this.handleElementClick(el);
       });
       this.$elements.appendChild(div);
+      this._sceneEls.set(el.id, div);
     });
-  }
 
-  // ===================== 导航 =====================
-  tryNavigate(direction) {
-    const scene = SCENES[this.state.currentSceneId];
-    // 暗道：向下箭头返回上一个场景
-    if (direction === 'down') {
-      if (scene.id === 'dark_passage') {
-        this.loadScene('bedroom');
-        return;
+    // 移除不再可见的旧元素
+    if (!sceneChanged) {
+      for (const [id, dom] of this._sceneEls) {
+        if (!visibleIds.has(id)) {
+          dom.remove();
+          this._sceneEls.delete(id);
+        }
       }
-      return;
     }
-    const conn = direction === 'left' ? scene.connections.left : scene.connections.right;
-    if (!conn) return;
-    if (conn.locked && !this.state.flags[conn.unlockFlag]) {
-      this.showDialog(conn.lockedText || '此路不通。');
-      return;
-    }
-    this.loadScene(typeof conn === 'string' ? conn : conn.id);
   }
 
   // ===================== 元素交互 =====================
@@ -600,7 +558,7 @@ class GameEngine {
     switch (el.type) {
       case 'collectible': this.collectItem(el); break;
       case 'return':
-        var retConn = SCENES[this.state.currentSceneId].connections.left;
+        const retConn = SCENES[this.state.currentSceneId].connections.left;
         if (retConn && !(retConn.locked && !this.state.flags[retConn.unlockFlag])) {
           this.state.navigationHistory.pop();
           this.loadScene(retConn.id, true);
@@ -608,8 +566,8 @@ class GameEngine {
         break;
       case 'door':
         // 检查前进连接是否已解锁 → 点击门进入下一场景
-        var doorScene = SCENES[this.state.currentSceneId];
-        var rightConn = doorScene.connections.right;
+        const doorScene = SCENES[this.state.currentSceneId];
+        const rightConn = doorScene.connections.right;
         if (rightConn && !(rightConn.locked && !this.state.flags[rightConn.unlockFlag])) {
           this.loadScene(rightConn.id);
           break;
@@ -619,7 +577,7 @@ class GameEngine {
       case 'hotspot':
       case 'npc':
         if (el.id === 'ritual_altar') {
-          var hasTruth = this.state.inventory.includes('hidden_truth');
+          const hasTruth = this.state.inventory.includes('hidden_truth');
           this.showDialog(hasTruth ? el.text :
             '封印正前方有一个石台，上面放着一本已经翻阅过无数遍的册子。\n\n第一页写着：\n"守门人之誓"\n"以血为契，以命为锁。塘底之物，永世不出。"\n\n最后一页列出了两种选择。\n旁边有人用颤抖的笔迹添了一行批注——\n但字迹被水渍模糊了，只看得到最后几个字：\n\n"……是囚禁。"\n\n也许还有别的线索能帮你还原被隐藏的真相。');
         } else if (el.id === 'central_seal' && this.state.flags['seal_pattern_solved']) {
@@ -655,7 +613,7 @@ class GameEngine {
       clone.style.pointerEvents = 'none';
       document.body.appendChild(clone);
 
-      var self = this;
+      const self = this;
       requestAnimationFrame(function () {
         clone.style.left = (toRect.left + toRect.width / 2 - fromRect.width / 2) + 'px';
         clone.style.top = (toRect.top + toRect.height / 2 - fromRect.height / 2) + 'px';
@@ -675,7 +633,7 @@ class GameEngine {
     }
     this.audio.sfxCollect();
     // 延迟渲染让动画先开始
-    var self = this;
+    const self = this;
     setTimeout(function () {
       self.renderInventory();
       self.renderScene(SCENES[self.state.currentSceneId]);
@@ -740,7 +698,7 @@ class GameEngine {
 
   // ===================== 选择对话框 =====================
   showChoiceDialog() {
-    var hasTruth = this.state.inventory.includes('hidden_truth');
+    const hasTruth = this.state.inventory.includes('hidden_truth');
 
     this.$dialogText.textContent =
       '匕首完美地嵌入了封印的中央。\n\n刃上的四个符文——🜂 火 · 🜄 水 · 🜁 风 · 🜃 土——逐一发出微光。\n\n你想起祖父日记中的话：\n"如果封印是守护，\n为什么需要血来维持？"\n\n你握紧匕首，割破了掌心。\n血沿着刀刃滴落——\n落在封印上时，发出了一声低沉的回响。\n\n塘底的东西醒了。\n它在听。\n\n封印开始剧烈地震动——\n四个圆环全部亮起，整个房间都在颤抖。\n\n一个声音在你脑海中响起：\n\n"守门人的后代，做出你的选择。"' +
@@ -844,7 +802,6 @@ class GameEngine {
     for (let i = 0; i < 10; i++) {
       const slot = document.createElement('div');
       slot.className = 'inventory-slot';
-      // 快捷键提示
       const keyHint = document.createElement('span');
       keyHint.style.cssText = 'position:absolute;top:2px;left:5px;font-size:0.55rem;color:var(--text-dim);opacity:0.5;pointer-events:none;';
       keyHint.textContent = i === 9 ? '0' : (i + 1);
@@ -854,7 +811,6 @@ class GameEngine {
         const itemId = this.state.inventory[itemIdx];
         const item = ITEMS[itemId];
         if (item) {
-          // 道具栏使用图片与场景、详情弹窗保持一致
           if (item.img) {
             const barImg = document.createElement('img');
             barImg.src = item.img;
@@ -890,7 +846,6 @@ class GameEngine {
       this.$slots.appendChild(slot);
     }
 
-    // 翻页按钮
     const $prev = document.getElementById('inv-prev');
     const $next = document.getElementById('inv-next');
     if ($prev && $next) {
@@ -915,7 +870,7 @@ class GameEngine {
     if (!item) return;
     this.$itemDetailEmoji.innerHTML = '';
     if (item.img) {
-      var img = document.createElement('img');
+      const img = document.createElement('img');
       img.src = item.img;
       img.alt = item.emoji || '';
       img.className = 'detail-img';
@@ -976,7 +931,7 @@ class GameEngine {
         if (reward.dialog) self.showDialog(reward.dialog);
         if (reward.setFlag) self.state.flags[reward.setFlag] = true;
         if (reward.giveItem) {
-          var item = ITEMS[reward.giveItem];
+          const item = ITEMS[reward.giveItem];
           if (item && self.state.inventory.indexOf(item.id) === -1) {
             self.state.inventory.push(item.id);
             self.renderInventory();
@@ -1014,7 +969,9 @@ class GameEngine {
   }
 
   showNotes() {
-    const old = document.getElementById('notes-panel');
+    let old = document.getElementById('settings-panel');
+    if (old) old.remove();
+    old = document.getElementById('notes-panel');
     if (old) old.remove();
     const panel = document.createElement('div');
     panel.id = 'notes-panel';
@@ -1077,7 +1034,7 @@ class GameEngine {
     this.$choiceB.textContent = '设置';
     this.$dialog.classList.remove('hidden');
     this._pendingChoice = false;
-    var self = this;
+    const self = this;
     this.$choiceA.onclick = function () { self.hideDialog(); };
     this.$choiceB.onclick = function () { self.hideDialog(); self.showSettings(); };
     this.$dialogClose.onclick = function () { self.showRestartConfirm(); };
@@ -1100,11 +1057,13 @@ class GameEngine {
 
   // ===================== 设置面板 =====================
   showSettings() {
-    const old = document.getElementById('notes-panel');
+    let old = document.getElementById('notes-panel');
+    if (old) old.remove();
+    old = document.getElementById('settings-panel');
     if (old) old.remove();
     const panel = document.createElement('div');
-    panel.id = 'notes-panel';
-    let html = '<div id="notes-content"><h3>⚙️ 设  置</h3>';
+    panel.id = 'settings-panel';
+    let html = '<div id="settings-content"><h3>⚙️ 设  置</h3>';
 
     html += '<div style="margin-bottom:18px;">';
     html += '<p style="color:var(--text-dim);margin-bottom:6px;">主音量</p>';
@@ -1116,24 +1075,24 @@ class GameEngine {
     html += '<input type="range" id="set-sfx-vol" min="0" max="100" value="' + Math.round(this.audio.getSfxVolume() * 100) + '" style="width:100%;accent-color:var(--gold);">';
     html += '</div>';
 
-    html += '<button id="notes-close">关闭</button></div>';
+    html += '<button id="settings-close">关闭</button></div>';
     panel.innerHTML = html;
     this.$container.appendChild(panel);
 
-    var self = this;
+    const self = this;
     panel.querySelector('#set-master-vol').addEventListener('input', function () {
-      var v = parseInt(this.value) / 100;
+      const v = parseInt(this.value) / 100;
       self.audio.setMasterVolume(v);
       self.state.settings.masterVolume = v;
       self.saveSettings();
     });
     panel.querySelector('#set-sfx-vol').addEventListener('input', function () {
-      var v = parseInt(this.value) / 100;
+      const v = parseInt(this.value) / 100;
       self.audio.setSfxVolume(v);
       self.state.settings.sfxVolume = v;
       self.saveSettings();
     });
-    panel.querySelector('#notes-close').addEventListener('click', function () { panel.remove(); });
+    panel.querySelector('#settings-close').addEventListener('click', function () { panel.remove(); });
     panel.addEventListener('click', function (e) { if (e.target === panel) panel.remove(); });
   }
 
@@ -1145,9 +1104,9 @@ class GameEngine {
 
   loadSettings() {
     try {
-      var raw = localStorage.getItem('damentang_settings');
+      const raw = localStorage.getItem('damentang_settings');
       if (raw) {
-        var s = JSON.parse(raw);
+        const s = JSON.parse(raw);
         this.state.settings = s;
         this.audio.setMasterVolume(s.masterVolume || 0.7);
         this.audio.setSfxVolume(s.sfxVolume || 0.7);
